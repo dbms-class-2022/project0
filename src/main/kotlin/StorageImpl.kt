@@ -1,4 +1,6 @@
+import java.lang.IllegalArgumentException
 import java.nio.ByteBuffer
+import java.util.*
 import java.util.function.Consumer
 import java.util.function.Function
 import kotlin.math.absoluteValue
@@ -6,6 +8,7 @@ import kotlin.math.sign
 
 private var pageCount = 0
 fun createDiskPage(): DiskPage = DiskPageImpl(pageCount++, DEFAULT_DISK_PAGE_SIZE)
+fun createHardDriveEmulatorStorage(): Storage = HardDiskEmulatorStorage()
 
 private class DiskPageImpl(
     override val id: PageId,
@@ -137,27 +140,71 @@ private class DiskPageImpl(
     private fun ByteBuffer.toBytes() = ByteArray(this.limit()).also {this.get(it)}
 }
 
-private class HardDiskEmulatorStorage : Storage {
-    override fun readPage(pageId: PageId): DiskPage {
-        TODO("Not yet implemented")
-    }
+private class HardDiskEmulatorStorage: Storage {
+    private var accessCostMs = 0.0
+    private val pageMap = TreeMap<PageId, DiskPage>()
+
+    override val totalAccessCost: Double get() = accessCostMs
+    override fun readPage(pageId: PageId): DiskPage =
+        pageMap.getOrElse(pageId) {
+            DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
+        }.also {
+            countRandomAccess(pageId)
+        }
+
 
     override fun readPageSequence(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>) {
-        TODO("Not yet implemented")
+        (startPageId until startPageId+numPages).forEach {
+            reader.accept(readPage(it))
+        }
+        countRandomAccess(startPageId)
+        countSeqScan(numPages)
     }
 
-    override fun writePage(page: DiskPage): DiskPage {
-        TODO("Not yet implemented")
+    override fun writePage(page: DiskPage) {
+        if (page.id < 0) {
+            throw IllegalArgumentException("A disk page is supposed to have an ID")
+        }
+        pageMap[page.id] = page
+        countRandomAccess(page.id)
     }
 
-    override fun writePageWithAnchor(page: DiskPage, anchorPageId: PageId): DiskPage {
-        TODO("Not yet implemented")
+    override fun createPage(): DiskPage {
+        val nextKey = if (pageMap.isEmpty()) 0 else pageMap.lastKey() + 1
+        return DiskPageImpl(nextKey, DEFAULT_DISK_PAGE_SIZE).also {
+            pageMap[nextKey] = it
+            countRandomAccess(nextKey)
+        }
     }
 
-    override fun writePageSequence(anchorPageId: PageId): Function<in DiskPage, out DiskPage> {
-        TODO("Not yet implemented")
+    override fun writePageSequence(): Function<in DiskPage?, out DiskPage?> {
+        var nextKey = pageMap.lastKey() + 1
+        var numPages = 0
+        countRandomAccess(nextKey)
+        return Function { pageIn ->
+            if (pageIn == null) {
+                countSeqScan(numPages)
+                null
+            } else {
+                DiskPageImpl(nextKey, DEFAULT_DISK_PAGE_SIZE, pageIn.rawBytes).also {
+                    pageMap[nextKey] = it
+                    numPages++
+                    nextKey++
+                }
+            }
+        }
     }
 
+    private fun countRandomAccess(pageId: PageId) {
+        accessCostMs += 5.0
+    }
+
+    private fun countSeqScan(numPages: Int) {
+        // 5400 rotations per minute = 90 rotations per second = 1 rotation per 0.0111 seconds
+        // 1 page is 8 sectors and there are 64 sectors per track => there are 8 pages per track
+        // => we need 1/8 rotation = 1.3ms to read the whole page
+        accessCostMs = 1.3 * numPages
+    }
 }
 
 private val EMPTY_BYTE_ARRAY = ByteArray(0)
