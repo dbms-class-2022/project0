@@ -55,10 +55,12 @@ interface DiskPage {
 
 interface Storage {
     fun readPage(pageId: PageId): DiskPage
-    fun readPageSequence(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>)
+    fun readPageSequence(startPageId: PageId = -1, numPages: Int = 1, reader: Consumer<DiskPage>)
     fun writePage(page: DiskPage)
+    fun writePageSequence(startPageId: PageId = -1): Function<in DiskPage?, out DiskPage?>
+
     fun createPage(): DiskPage
-    fun writePageSequence(): Function<in DiskPage?, out DiskPage?>
+
 
     val totalAccessCost: Double
 }

@@ -32,6 +32,7 @@ private class DiskPageImpl(
 
     init {
         directorySize = this.bytes.getDirectorySize()
+        lastRecordOffset = if (directorySize > 0) this.bytes.getDirectoryEntry(directorySize - 1) else pageSize
     }
     override fun putRecord(recordData: ByteArray, recordId_: RecordId): PutRecordResult {
         val recordId = if (recordId_ == -1) directorySize else recordId_
@@ -145,19 +146,24 @@ private class HardDiskEmulatorStorage: Storage {
     private val pageMap = TreeMap<PageId, DiskPage>()
 
     override val totalAccessCost: Double get() = accessCostMs
+
+    private fun nextPageId() = if (pageMap.isEmpty()) 0 else pageMap.lastKey() + 1
     override fun readPage(pageId: PageId): DiskPage =
-        pageMap.getOrElse(pageId) {
-            DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
-        }.also {
+        doReadPage(pageId).also {
             countRandomAccess(pageId)
         }
 
+    fun doReadPage(pageId: PageId): DiskPage =
+        DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE, pageMap.getOrElse(pageId) {
+            DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
+        }.rawBytes)
 
     override fun readPageSequence(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>) {
-        (startPageId until startPageId+numPages).forEach {
-            reader.accept(readPage(it))
+        val realStartPageId = if (startPageId == -1) nextPageId() else startPageId
+        (realStartPageId until realStartPageId+numPages).forEach {
+            reader.accept(doReadPage(it))
         }
-        countRandomAccess(startPageId)
+        countRandomAccess(realStartPageId)
         countSeqScan(numPages)
     }
 
@@ -165,20 +171,18 @@ private class HardDiskEmulatorStorage: Storage {
         if (page.id < 0) {
             throw IllegalArgumentException("A disk page is supposed to have an ID")
         }
-        pageMap[page.id] = page
+        pageMap[page.id] = DiskPageImpl(page.id, DEFAULT_DISK_PAGE_SIZE, page.rawBytes)
         countRandomAccess(page.id)
     }
 
     override fun createPage(): DiskPage {
-        val nextKey = if (pageMap.isEmpty()) 0 else pageMap.lastKey() + 1
-        return DiskPageImpl(nextKey, DEFAULT_DISK_PAGE_SIZE).also {
-            pageMap[nextKey] = it
-            countRandomAccess(nextKey)
-        }
+        val nextKey = nextPageId()
+        pageMap[nextKey] = DiskPageImpl(nextKey, DEFAULT_DISK_PAGE_SIZE)
+        return readPage(nextKey)
     }
 
-    override fun writePageSequence(): Function<in DiskPage?, out DiskPage?> {
-        var nextKey = pageMap.lastKey() + 1
+    override fun writePageSequence(startPageId: PageId): Function<in DiskPage?, out DiskPage?> {
+        var nextKey = if (startPageId == -1) nextPageId() else startPageId
         var numPages = 0
         countRandomAccess(nextKey)
         return Function { pageIn ->
