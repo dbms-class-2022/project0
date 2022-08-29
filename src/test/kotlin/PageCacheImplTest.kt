@@ -66,10 +66,32 @@ class PageCacheImplTest {
 
         cache.getAndPin(10).close()
         val cost2 = storage.totalAccessCost
+        assertEquals(1, cache.stats.cacheMiss)
 
         (1..5).forEach { cache.getAndPin(it) }
         val cost3 = storage.totalAccessCost
+        assertEquals(4, cache.stats.cacheHit)
+        assertEquals(2, cache.stats.cacheMiss)
 
-        assertEquals(0.0,cost3 - cost2)
+        assertTrue(cost3 > cost2)
+    }
+
+    @Test
+    fun `subcache pages eviction priority`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = DummyPageCacheImpl(storage, maxCacheSize = 10)
+        cache.load(1, 5)
+        val subcache = cache.createSubCache(5)
+        subcache.load(6, 5)
+        subcache.getAndPin(6)
+        assertEquals(1, cache.stats.cacheHit)
+        assertEquals(1, subcache.stats.cacheHit)
+
+        subcache.getAndPin(20)
+        subcache.getAndPin(1)
+        (1..5).forEach { cache.getAndPin(it) }
+        assertEquals(2, subcache.stats.cacheMiss)
+        assertEquals(1, cache.stats.cacheMiss)
+        assertEquals(6, subcache.stats.cacheHit)
     }
 }
