@@ -83,15 +83,19 @@ class PageCacheImplTest {
         cache.load(1, 5)
         val subcache = cache.createSubCache(5)
         subcache.load(6, 5)
+        // +1 hit in main, +1 hit in subcache
         subcache.getAndPin(6)
         assertEquals(1, cache.stats.cacheHit)
         assertEquals(1, subcache.stats.cacheHit)
 
+        // +1 miss in main and subcache
         subcache.getAndPin(20)
+        // +1 miss in subcache, +1 hit in main
         subcache.getAndPin(1)
+        // +5 hits in main
         (1..5).forEach { cache.getAndPin(it) }
         assertEquals(2, subcache.stats.cacheMiss)
         assertEquals(1, cache.stats.cacheMiss)
-        assertEquals(6, subcache.stats.cacheHit)
+        assertEquals(7, cache.stats.cacheHit)
     }
 }
