@@ -1,4 +1,6 @@
 import java.nio.ByteBuffer
+import java.time.Instant
+import java.util.*
 
 sealed class AttributeType<T>(val byteSize: Int = -1) {
     val isFixedSize: Boolean = byteSize > 0
@@ -17,6 +19,15 @@ class IntAttribute: AttributeType<Int>(Int.SIZE_BYTES) {
 }
 fun intField(value: Int = 0) = IntAttribute() to value
 
+class LongAttribute: AttributeType<Long>(Long.SIZE_BYTES) {
+    override fun asBytes(value: Long): ByteArray = ByteBuffer.allocate(byteSize).also {
+        it.putLong(value)
+    }.array()
+
+    override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long to Long.SIZE_BYTES
+}
+fun longField(value: Long = 0L) = LongAttribute() to value
+
 class StringAttribute: AttributeType<String>() {
     override fun asBytes(value: String): ByteArray =
         value.toCharArray().let {chars ->
@@ -33,6 +44,35 @@ class StringAttribute: AttributeType<String>() {
     }
 }
 fun stringField(value: String = "") = StringAttribute() to value
+
+class BooleanAttribute: AttributeType<Boolean>(Byte.SIZE_BYTES) {
+    override fun asBytes(value: Boolean): ByteArray = ByteBuffer.allocate(byteSize).also {
+        it.put(if (value) 1 else 0)
+    }.array()
+
+    override fun fromBytes(bytes: ByteArray) = (ByteBuffer.wrap(bytes).get().toInt() == 1) to Byte.SIZE_BYTES
+}
+fun booleanField(value: Boolean = false) = BooleanAttribute() to value
+
+class DoubleAttribute: AttributeType<Double>(Double.SIZE_BYTES) {
+    override fun asBytes(value: Double): ByteArray = ByteBuffer.allocate(byteSize).also {
+        it.putDouble(value)
+    }.array()
+
+    override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).double to Double.SIZE_BYTES
+}
+fun doubleField(value: Double = 0.0) = DoubleAttribute() to value
+
+class DateAttribute: AttributeType<Date>(Long.SIZE_BYTES) {
+    override fun asBytes(value: Date): ByteArray = ByteBuffer.allocate(byteSize).also {
+        it.putLong(value.time)
+    }.array()
+
+    override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long.let {
+        Date.from(Instant.ofEpochMilli(it))
+    } to Long.SIZE_BYTES
+}
+fun dateField(value: Date = Date.from(Instant.EPOCH)) = DateAttribute() to value
 
 class Record1<T1: Any>(f1: Pair<AttributeType<T1>, T1>) {
     val type1 = f1.first
