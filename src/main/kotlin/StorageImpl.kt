@@ -30,6 +30,8 @@ private class DiskPageImpl(
     override val freeSpace: Int
         get() = lastRecordOffset - directorySize * Int.SIZE_BYTES - directoryStartOffset
 
+    override val recordHeaderSize: Int = Int.SIZE_BYTES
+
     init {
         directorySize = this.bytes.getDirectorySize()
         lastRecordOffset = if (directorySize > 0) this.bytes.getDirectoryEntry(directorySize - 1) else pageSize

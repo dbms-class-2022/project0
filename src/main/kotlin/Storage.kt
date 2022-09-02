@@ -24,6 +24,7 @@ data class PutRecordResult(val recordId: RecordId, val isOutOfSpace: Boolean = f
  * and may either remove it completely and thus change the ids of some records, or to put a tombstone instead.
  */
 interface DiskPage {
+
     // Identifier of this page
     val id: PageId
 
@@ -34,6 +35,8 @@ interface DiskPage {
     // free space may or may not be sufficient for adding new records, depending on how records and auxiliary data
     // structures grow internally.
     val freeSpace: Int
+
+    val recordHeaderSize: Int
 
     // Puts the passed record into the page. Record id is supposed to be in the range [0..recordCount]. Special value
     // -1 is accepted too, and is equivalent to recordCount.
@@ -46,7 +49,7 @@ interface DiskPage {
     // logically deleted, and in this case isDeleted flag is set to true.
     fun getRecord(recordId: RecordId): GetRecordResult
 
-    // Deleted a record with the given id if it exists
+    // Deletes a record with the given id if it exists
     fun deleteRecord(recordId: RecordId)
 
     // Returns all records. Records which are logically deleted are returned as well.
