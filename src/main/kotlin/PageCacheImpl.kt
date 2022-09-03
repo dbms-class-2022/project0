@@ -8,10 +8,11 @@ internal data class StatsImpl(var cacheHitCount: Int = 0, var cacheMissCount: In
 
 internal class CachedPageImpl(override val diskPage: DiskPage, private val evict: (CachedPageImpl)->Unit, var pinCount: Int = 1): CachedPage {
     override fun close() {
-        assert(pinCount > 0)
-        pinCount -= 1
-        if (pinCount == 0) {
-            evict(this)
+        if (pinCount > 0) {
+            pinCount -= 1
+            if (pinCount == 0) {
+                evict(this)
+            }
         }
     }
 }
@@ -32,19 +33,26 @@ class DummyPageCacheImpl(internal val storage: Storage, private val maxCacheSize
         }
     }
 
+    override fun get(pageId: PageId): CachedPage = doGetAndPin(
+        pageId,
+        { cacheHit -> if (cacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1 },
+        this::doAddPage,
+        0
+    )
+
     override fun getAndPin(pageId: PageId): CachedPage = doGetAndPin(
         pageId,
         { cacheHit -> if (cacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1 },
         this::doAddPage
     )
 
-    internal fun doGetAndPin(pageId: PageId, recordCacheHit: (Boolean) -> Unit, addPage: (page: DiskPage) -> CachedPageImpl): CachedPageImpl {
+    internal fun doGetAndPin(pageId: PageId, recordCacheHit: (Boolean) -> Unit, addPage: (page: DiskPage) -> CachedPageImpl, pinIncrement: Int = 1): CachedPageImpl {
         var cacheHit = true
         return cache.getOrElse(pageId) {
             cacheHit = false
             addPage(storage.readPage(pageId))
         }.also {
-            it.pinCount += 1
+            it.pinCount += pinIncrement
             recordCacheHit(cacheHit)
         }
     }
@@ -84,7 +92,10 @@ class SubcacheImpl(private val mainCache: DummyPageCacheImpl, private val maxCac
         mainCache.doLoad(startPageId, pageCount, this::doAddPage)
     }
 
-    override fun getAndPin(pageId: PageId): CachedPage {
+    override fun get(pageId: PageId) = doGetAndPin(pageId, 0)
+
+    override fun getAndPin(pageId: PageId): CachedPage = doGetAndPin(pageId, 1)
+    private fun doGetAndPin(pageId: PageId, pinIncrement: Int): CachedPage {
         var localCacheHit = subcachePages.contains(pageId)
         if (localCacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1
         return mainCache.doGetAndPin(
@@ -96,7 +107,8 @@ class SubcacheImpl(private val mainCache: DummyPageCacheImpl, private val maxCac
                     mainCache.statsImpl.cacheMissCount += 1
                 }
             },
-            this::doAddPage)
+            this::doAddPage,
+            pinIncrement)
     }
 
     private fun doAddPage(page: DiskPage): CachedPageImpl {

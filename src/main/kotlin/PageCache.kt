@@ -4,6 +4,9 @@ interface CachedPage : AutoCloseable {
 
 interface PageCache {
     fun load(startPageId: PageId, pageCount: Int = 1)
+
+    fun get(pageId: PageId): CachedPage
+
     fun getAndPin(pageId: PageId): CachedPage
     fun createSubCache(size: Int): PageCache
     fun flush()
