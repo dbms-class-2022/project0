@@ -156,7 +156,7 @@ private class HardDiskEmulatorStorage: Storage {
         }
 
     fun doReadPage(pageId: PageId): DiskPage =
-        DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE, pageMap.getOrElse(pageId) {
+        DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE, pageMap.getOrPut(pageId) {
             DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
         }.rawBytes)
 
