@@ -1,4 +1,5 @@
 import java.util.function.Function
+import kotlin.math.max
 
 class FullScanAccessImpl<T>(
     private val pageCache: PageCache,
@@ -26,11 +27,10 @@ class FullScanIteratorImpl<T>(
     override fun next(): T = currentRecord!!.also { advance() }
 
     private fun advancePage(): CachedPage? {
-        currentPage?.close()
         while (rootRecords.hasNext()) {
             val nextOidPageidRecord = rootRecords.next()
             if (nextOidPageidRecord.value1 == tableOid) {
-                return pageCache.getAndPin(nextOidPageidRecord.value2)
+                return pageCache.get(nextOidPageidRecord.value2)
             }
         }
         return null
@@ -121,6 +121,35 @@ class RootRecordIteratorImpl(
         }
     }
 }
+
+interface TablePageDirectory {
+    fun records(tableOid: Oid): Iterable<OidPageidRecord>
+    fun add(tableOid: Oid, pageid: PageId = -1): PageId
+}
+
+class SimplePageDirectoryImpl(private val pageCache: PageCache): TablePageDirectory {
+    private var maxPageId: PageId = MAX_ROOT_PAGE_COUNT + 1
+    override fun records(tableOid: Oid): Iterable<OidPageidRecord> = RootRecords(pageCache, tableOid, 1)
+
+    override fun add(tableOid: Oid, pageid: PageId): PageId {
+        val nextPageId = if (pageid == -1) {
+            maxPageId
+        } else {
+            pageid
+        }
+        maxPageId = 1 + max(maxPageId, pageid)
+        return pageCache.getAndPin(tableOid).use { cachedPage ->
+            cachedPage.diskPage.putRecord(OidPageidRecord(intField(tableOid), intField(nextPageId)).asBytes()).let {
+                if (it.isOutOfSpace) {
+                    throw SystemCatalogException("Directory page overflow for relation $tableOid")
+                }
+            }
+            nextPageId
+        }
+    }
+
+}
+
 
 class RootRecords(private val pageCache: PageCache,
                   private val startRootPageId: PageId = 1,

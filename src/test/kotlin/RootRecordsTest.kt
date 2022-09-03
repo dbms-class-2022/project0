@@ -3,6 +3,12 @@ import kotlin.test.assertEquals
 
 class RootRecordsTest {
     @Test
+    fun `empty root records`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = DummyPageCacheImpl(storage, 20)
+        assertEquals(listOf(), RootRecords(cache, 0, 1).toList())
+    }
+    @Test
     fun `iterate in bounds of one page`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = DummyPageCacheImpl(storage, 20)
