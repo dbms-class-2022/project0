@@ -16,6 +16,17 @@ class IntAttribute: AttributeType<Int>(Int.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).int to Int.SIZE_BYTES
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun intField(value: Int = 0) = IntAttribute() to value
 
@@ -25,6 +36,17 @@ class LongAttribute: AttributeType<Long>(Long.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long to Long.SIZE_BYTES
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun longField(value: Long = 0L) = LongAttribute() to value
 
@@ -42,6 +64,18 @@ class StringAttribute: AttributeType<String>() {
         val length = ByteBuffer.wrap(bytes).int * Char.SIZE_BYTES
         return ByteBuffer.wrap(bytes, Int.SIZE_BYTES, length).asCharBuffer().toString() to Int.SIZE_BYTES + length
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun stringField(value: String = "") = StringAttribute() to value
 
@@ -51,6 +85,17 @@ class BooleanAttribute: AttributeType<Boolean>(Byte.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = (ByteBuffer.wrap(bytes).get().toInt() == 1) to Byte.SIZE_BYTES
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun booleanField(value: Boolean = false) = BooleanAttribute() to value
 
@@ -60,6 +105,17 @@ class DoubleAttribute: AttributeType<Double>(Double.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).double to Double.SIZE_BYTES
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun doubleField(value: Double = 0.0) = DoubleAttribute() to value
 
@@ -71,6 +127,18 @@ class DateAttribute: AttributeType<Date>(Long.SIZE_BYTES) {
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long.let {
         Date.from(Instant.ofEpochMilli(it))
     } to Long.SIZE_BYTES
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+
 }
 fun dateField(value: Date = Date.from(Instant.EPOCH)) = DateAttribute() to value
 
@@ -80,6 +148,25 @@ class Record1<T1: Any>(f1: Pair<AttributeType<T1>, T1>) {
 
     fun asBytes(): ByteArray = type1.asBytes(value1)
     fun fromBytes(bytes: ByteArray) = type1.fromBytes(bytes)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Record1<*>
+
+        if (type1 != other.type1) return false
+        if (value1 != other.value1) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type1.hashCode()
+        result = 31 * result + value1.hashCode()
+        return result
+    }
+
+
 }
 
 class Record2<T1: Any, T2: Any>(
@@ -98,6 +185,34 @@ class Record2<T1: Any, T2: Any>(
         val v2: T2 = buffer.readAttribute(type2)
         return Record2(type1 to v1, type2 to v2)
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Record2<*, *>
+
+        if (type1 != other.type1) return false
+        if (value1 != other.value1) return false
+        if (type2 != other.type2) return false
+        if (value2 != other.value2) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type1.hashCode()
+        result = 31 * result + value1.hashCode()
+        result = 31 * result + type2.hashCode()
+        result = 31 * result + value2.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "Record2(type1=$type1, value1=$value1, type2=$type2, value2=$value2)"
+    }
+
+
 }
 
 class Record3<T1: Any, T2: Any, T3: Any>(
@@ -120,6 +235,34 @@ class Record3<T1: Any, T2: Any, T3: Any>(
         val v3: T3 = buffer.readAttribute(type3)
         return Record3(type1 to v1, type2 to v2, type3 to v3)
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Record3<*, *, *>
+
+        if (type1 != other.type1) return false
+        if (value1 != other.value1) return false
+        if (type2 != other.type2) return false
+        if (value2 != other.value2) return false
+        if (type3 != other.type3) return false
+        if (value3 != other.value3) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type1.hashCode()
+        result = 31 * result + value1.hashCode()
+        result = 31 * result + type2.hashCode()
+        result = 31 * result + value2.hashCode()
+        result = 31 * result + type3.hashCode()
+        result = 31 * result + value3.hashCode()
+        return result
+    }
+
+
 }
 
 fun <T> ByteBuffer.readAttribute(attrType: AttributeType<T>): T {
