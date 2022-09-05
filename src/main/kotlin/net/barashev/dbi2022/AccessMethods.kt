@@ -1,3 +1,5 @@
+package net.barashev.dbi2022
+
 import java.util.function.Function
 import kotlin.math.max
 

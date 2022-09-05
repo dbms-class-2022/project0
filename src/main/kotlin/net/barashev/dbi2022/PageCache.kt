@@ -14,32 +14,24 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+package net.barashev.dbi2022
 
-plugins {
-    kotlin("jvm") version "1.7.10"
-    application
+interface CachedPage : AutoCloseable {
+    val diskPage: DiskPage
 }
 
-group = "org.example"
-version = "1.0-SNAPSHOT"
+interface PageCache {
+    fun load(startPageId: PageId, pageCount: Int = 1)
 
-repositories {
-    mavenCentral()
+    fun get(pageId: PageId): CachedPage
+
+    fun getAndPin(pageId: PageId): CachedPage
+    fun createSubCache(size: Int): PageCache
+    fun flush()
+    val stats: PageCacheStats
 }
 
-dependencies {
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-application {
-    mainClass.set("MainKt")
+interface PageCacheStats {
+    val cacheHit: Int
+    val cacheMiss: Int
 }

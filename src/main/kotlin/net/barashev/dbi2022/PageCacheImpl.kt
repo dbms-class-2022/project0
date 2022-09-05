@@ -1,3 +1,20 @@
+/*
+ * Copyright 2022 Dmitry Barashev, JetBrains s.r.o.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.barashev.dbi2022
 
 internal data class StatsImpl(var cacheHitCount: Int = 0, var cacheMissCount: Int = 0): PageCacheStats {
     override val cacheHit: Int
@@ -17,7 +34,7 @@ internal class CachedPageImpl(override val diskPage: DiskPage, private val evict
     }
 }
 
-class DummyPageCacheImpl(internal val storage: Storage, private val maxCacheSize: Int = -1): PageCache {
+class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSize: Int = -1): PageCache {
     internal val statsImpl = StatsImpl()
     override val stats: PageCacheStats get() = statsImpl
     internal val cache = mutableMapOf<PageId, CachedPageImpl>()
@@ -84,7 +101,7 @@ class DummyPageCacheImpl(internal val storage: Storage, private val maxCacheSize
     }
 }
 
-class SubcacheImpl(private val mainCache: DummyPageCacheImpl, private val maxCacheSize: Int): PageCache {
+class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCacheSize: Int): PageCache {
     private val statsImpl = StatsImpl()
     override val stats: PageCacheStats get() = statsImpl
     private val subcachePages = mutableSetOf<PageId>()
