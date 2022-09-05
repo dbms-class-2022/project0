@@ -20,13 +20,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 
-class SystemCatalogTest {
+class AccessMethodManagerTest {
     @Test
     fun `test table is missing`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage, 20)
-        val catalog = SimpleSystemCatalogImpl(cache, storage)
-        assertThrows<SystemCatalogException> {
+        val catalog = SimpleAccessMethodManager(cache)
+        assertThrows<AccessMethodException> {
             catalog.createFullScan("qwerty") { error("Not expected to be here") }
         }
     }
@@ -35,7 +35,7 @@ class SystemCatalogTest {
     fun `create table`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage, 20)
-        val catalog = SimpleSystemCatalogImpl(cache, storage)
+        val catalog = SimpleAccessMethodManager(cache)
         catalog.createTable("table1")
         val fullScan = catalog.createFullScan("table1") { error("Not expected to be here ")}
         assertEquals(listOf(), fullScan.toList())
@@ -45,10 +45,10 @@ class SystemCatalogTest {
     fun `add table page`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage, 20)
-        val catalog = SimpleSystemCatalogImpl(cache, storage)
+        val catalog = SimpleAccessMethodManager(cache)
         val tableOid = catalog.createTable("table1")
         cache.getAndPin(catalog.addPage(tableOid)).use { dataPage ->
-            dataPage.diskPage.putRecord(Record2(intField(42), stringField("Hello world")).asBytes())
+            dataPage.putRecord(Record2(intField(42), stringField("Hello world")).asBytes())
         }
 
         val fullScan = catalog.createFullScan("table1") {

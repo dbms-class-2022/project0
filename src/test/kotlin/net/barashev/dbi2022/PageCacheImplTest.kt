@@ -32,8 +32,8 @@ class PageCacheImplTest {
 
         val cost = storage.totalAccessCost
         cache.getAndPin(pageId).use {
-            assertEquals(TestRecord(1,1), TestRecord.fromByteArray(it.diskPage.getRecord(0).bytes))
-            it.diskPage.putRecord(TestRecord(2,2).toByteArray())
+            assertEquals(TestRecord(1,1), TestRecord.fromByteArray(it.getRecord(0).bytes))
+            it.putRecord(TestRecord(2,2).toByteArray())
         }
         cache.flush()
         assertEquals(TestRecord(2,2), TestRecord.fromByteArray(storage.readPage(pageId).getRecord(1).bytes))

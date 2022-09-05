@@ -16,8 +16,15 @@
 
 package net.barashev.dbi2022
 
-interface CachedPage : AutoCloseable {
-    val diskPage: DiskPage
+data class CachedPageUsage(
+    val readCount: Int,
+    val writeCount: Int,
+    val lastReadTs: Long,
+    val lastWriteTs: Long
+)
+interface CachedPage : AutoCloseable, DiskPage {
+    val isDirty: Boolean
+    val usage: CachedPageUsage
 }
 
 interface PageCache {

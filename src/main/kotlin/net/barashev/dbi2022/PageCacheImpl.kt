@@ -23,7 +23,30 @@ internal data class StatsImpl(var cacheHitCount: Int = 0, var cacheMissCount: In
         get() = cacheMissCount
 }
 
-internal class CachedPageImpl(override val diskPage: DiskPage, private val evict: (CachedPageImpl)->Unit, var pinCount: Int = 1): CachedPage {
+internal class CachedPageImpl(
+    internal val diskPage: DiskPage,
+    private val evict: (CachedPageImpl)->Unit,
+    var pinCount: Int = 1): CachedPage, DiskPage by diskPage {
+
+    override val isDirty: Boolean get() = usage.writeCount > 0
+
+    override var usage = CachedPageUsage(0, 0, System.currentTimeMillis(), -1)
+    override fun putRecord(recordData: ByteArray, recordId: RecordId): PutRecordResult = diskPage.putRecord(recordData, recordId).also {
+        usage = CachedPageUsage(usage.readCount, usage.writeCount + 1, usage.lastReadTs, System.currentTimeMillis())
+    }
+
+    override fun deleteRecord(recordId: RecordId) = diskPage.deleteRecord(recordId).also {
+        usage = CachedPageUsage(usage.readCount, usage.writeCount + 1, usage.lastReadTs, System.currentTimeMillis())
+    }
+
+    override fun getRecord(recordId: RecordId): GetRecordResult = diskPage.getRecord(recordId).also {
+        usage = CachedPageUsage(usage.readCount + 1, usage.writeCount, System.currentTimeMillis(), usage.lastWriteTs)
+    }
+
+    override fun allRecords(): Map<RecordId, GetRecordResult> = diskPage.allRecords().also {
+        usage = CachedPageUsage(usage.readCount + 1, usage.writeCount, System.currentTimeMillis(), usage.lastWriteTs)
+    }
+
     override fun close() {
         if (pinCount > 0) {
             pinCount -= 1

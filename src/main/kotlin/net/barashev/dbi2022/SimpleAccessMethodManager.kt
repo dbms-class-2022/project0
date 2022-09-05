@@ -18,25 +18,57 @@ package net.barashev.dbi2022
 
 import java.lang.IllegalArgumentException
 import java.util.function.Function
-
-typealias Oid = Int
-typealias OidPageidRecord = Record2<Oid, PageId>
-typealias OidNameRecord = Record2<Oid, String>
-typealias TableAttributeRecord = Record3<Oid, String, Int>
+import kotlin.math.max
 
 private const val ATTRIBUTE_SYSTABLE_OID = 1
 
 const val NAME_SYSTABLE_OID = 0
 
-class SystemCatalogException(message: String): Exception(message)
 
-class TableOidMapping(
+internal interface TablePageDirectory {
+    fun pages(tableOid: Oid): Iterable<OidPageidRecord>
+    fun add(tableOid: Oid, pageid: PageId = -1): PageId
+}
+
+/**
+ * This simple implementation of the page directory allocates one disk page per table, where ids of all
+ * table pages are stored. Consequently, the total number of a table pages is restricted by the number of
+ * directory records that fit into a single directory page. Also, the total number of pages is restricted by a constant
+ * which indicates how many pages are allocated for the directory.
+ */
+class SimplePageDirectoryImpl(private val pageCache: PageCache): TablePageDirectory {
+    private var maxPageId: PageId = MAX_ROOT_PAGE_COUNT + 1
+    override fun pages(tableOid: Oid): Iterable<OidPageidRecord> = RootRecords(pageCache, tableOid, 1)
+
+    override fun add(tableOid: Oid, pageid: PageId): PageId {
+        val nextPageId = if (pageid == -1) {
+            maxPageId
+        } else {
+            pageid
+        }
+        maxPageId = 1 + max(maxPageId, pageid)
+        return pageCache.getAndPin(tableOid).use { cachedPage ->
+            cachedPage.putRecord(OidPageidRecord(intField(tableOid), intField(nextPageId)).asBytes()).let {
+                if (it.isOutOfSpace) {
+                    throw AccessMethodException("Directory page overflow for relation $tableOid")
+                }
+            }
+            nextPageId
+        }
+    }
+}
+
+/**
+ * In-memory cache of table name to table OID mapping, which
+ * loads data from the system table NAME_SYSTABLE.
+ */
+internal class TableOidMapping(
     private val pageCache: PageCache,
     private val tablePageDirectory: TablePageDirectory) {
     private val cachedMapping = mutableMapOf<String, Oid?>()
 
     private fun createAccess(): FullScanAccessImpl<OidNameRecord> =
-        FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, tablePageDirectory.records(NAME_SYSTABLE_OID).iterator()) {
+        FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()) {
             OidNameRecord(intField(), stringField()).fromBytes(it)
         }
 
@@ -54,10 +86,10 @@ class TableOidMapping(
         val record = OidNameRecord(intField(), stringField(tableName))
         val bytes = record.asBytes()
         val availablePageId = createAccess().iteratorImpl().seekFirstPage {
-            it.diskPage.freeSpace > bytes.size + it.diskPage.recordHeaderSize
-        }?.diskPage?.id ?: tablePageDirectory.add(NAME_SYSTABLE_OID)
+            it.freeSpace > bytes.size + it.recordHeaderSize
+        }?.id ?: tablePageDirectory.add(NAME_SYSTABLE_OID)
         pageCache.getAndPin(availablePageId).use {page ->
-            page.diskPage.putRecord(bytes)
+            page.putRecord(bytes)
         }
         cachedMapping[tableName] = nextOid
         return nextOid
@@ -74,26 +106,26 @@ class TableOidMapping(
 }
 
 
-class SimpleSystemCatalogImpl(private val pageCache: PageCache, private val storage: Storage) {
+class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodManager {
     private val tablePageDirectory = SimplePageDirectoryImpl(pageCache)
     private val tableOidMapping = TableOidMapping(pageCache, tablePageDirectory)
 
     private fun <T> createFullScan(tableOid: Oid, recordBytesParser: Function<ByteArray, T>) =
         FullScanAccessImpl(pageCache, tableOid, RootRecordIteratorImpl(pageCache, tableOid, 1), recordBytesParser)
 
-    fun <T> createFullScan(tableName: String, recordBytesParser: Function<ByteArray, T>) =
+    override fun <T> createFullScan(tableName: String, recordBytesParser: Function<ByteArray, T>) =
         tableOidMapping.get(tableName)
             ?.let { tableOid -> createFullScan(tableOid, recordBytesParser) }
-            ?: throw SystemCatalogException("Relation $tableName not found")
+            ?: throw AccessMethodException("Relation $tableName not found")
 
-    fun createTable(tableName: String, vararg columns: Triple<String, AttributeType<Any>, ColumnConstraint?>): Oid {
+    override fun createTable(tableName: String, vararg columns: Triple<String, AttributeType<Any>, ColumnConstraint?>): Oid {
         if (tableOidMapping.get(tableName) != null) {
             throw IllegalArgumentException("Table $tableName already exists")
         }
         return tableOidMapping.create(tableName)
     }
 
-    fun addPage(tableOid: Oid): PageId = tablePageDirectory.add(tableOid)
+    override fun addPage(tableOid: Oid): PageId = tablePageDirectory.add(tableOid)
 
 
 }

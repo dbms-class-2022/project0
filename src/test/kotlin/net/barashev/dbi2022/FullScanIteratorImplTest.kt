@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 class FullScanIteratorImplTest {
     private fun createRootRecords(cache: PageCache) {
         cache.getAndPin(0).use {buf ->
-            buf.diskPage.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1000)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1000)).asBytes())
         }
 
     }
@@ -55,7 +55,7 @@ class FullScanIteratorImplTest {
         val cache = SimplePageCacheImpl(storage, 20)
         createRootRecords(cache)
         val rootRecords = RootRecords(cache, 0, 1)
-        cache.getAndPin(1000).diskPage.let {
+        cache.getAndPin(1000).let {
             it.putRecord(OidNameRecord(intField(2), stringField("table2")).asBytes())
             it.putRecord(OidNameRecord(intField(3), stringField("table3")).asBytes())
         }
@@ -72,15 +72,15 @@ class FullScanIteratorImplTest {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage, 20)
         cache.getAndPin(0).use {buf ->
-            buf.diskPage.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1000)).asBytes())
-            buf.diskPage.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1001)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1000)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1001)).asBytes())
         }
         val rootRecords = RootRecords(cache, 0, 1)
-        cache.getAndPin(1000).diskPage.let {
+        cache.getAndPin(1000).let {
             it.putRecord(OidNameRecord(intField(2), stringField("table2")).asBytes())
             it.putRecord(OidNameRecord(intField(3), stringField("table3")).asBytes())
         }
-        cache.getAndPin(1001).diskPage.let {
+        cache.getAndPin(1001).let {
             it.putRecord(OidNameRecord(intField(4), stringField("table4")).asBytes())
             it.putRecord(OidNameRecord(intField(5), stringField("table5")).asBytes())
         }
