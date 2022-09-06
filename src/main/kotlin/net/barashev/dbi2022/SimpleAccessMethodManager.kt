@@ -27,7 +27,7 @@ const val NAME_SYSTABLE_OID = 0
 
 internal interface TablePageDirectory {
     fun pages(tableOid: Oid): Iterable<OidPageidRecord>
-    fun add(tableOid: Oid, pageid: PageId = -1): PageId
+    fun add(tableOid: Oid, pageCount: Int = 1): PageId
 }
 
 /**
@@ -40,17 +40,15 @@ class SimplePageDirectoryImpl(private val pageCache: PageCache): TablePageDirect
     private var maxPageId: PageId = MAX_ROOT_PAGE_COUNT + 1
     override fun pages(tableOid: Oid): Iterable<OidPageidRecord> = RootRecords(pageCache, tableOid, 1)
 
-    override fun add(tableOid: Oid, pageid: PageId): PageId {
-        val nextPageId = if (pageid == -1) {
-            maxPageId
-        } else {
-            pageid
-        }
-        maxPageId = 1 + max(maxPageId, pageid)
+    override fun add(tableOid: Oid, pageCount: Int): PageId {
+        val nextPageId = maxPageId
+        maxPageId += pageCount
         return pageCache.getAndPin(tableOid).use { cachedPage ->
-            cachedPage.putRecord(OidPageidRecord(intField(tableOid), intField(nextPageId)).asBytes()).let {
-                if (it.isOutOfSpace) {
-                    throw AccessMethodException("Directory page overflow for relation $tableOid")
+            (nextPageId until maxPageId).forEach {
+                cachedPage.putRecord(OidPageidRecord(intField(tableOid), intField(it)).asBytes()).let {result ->
+                    if (result.isOutOfSpace) {
+                        throw AccessMethodException("Directory page overflow for relation $tableOid")
+                    }
                 }
             }
             nextPageId
@@ -125,7 +123,7 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
         return tableOidMapping.create(tableName)
     }
 
-    override fun addPage(tableOid: Oid): PageId = tablePageDirectory.add(tableOid)
+    override fun addPage(tableOid: Oid, pageCount: Int): PageId = tablePageDirectory.add(tableOid, pageCount)
 
 
 }

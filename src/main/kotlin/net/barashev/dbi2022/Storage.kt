@@ -74,13 +74,32 @@ interface DiskPage {
     fun allRecords(): Map<RecordId, GetRecordResult>
 }
 
+/**
+ * Storage abstraction, which allows for random and sequential reads and writes.
+ */
 interface Storage {
-    fun readPage(pageId: PageId): DiskPage
-    fun readPageSequence(startPageId: PageId = -1, numPages: Int = 1, reader: Consumer<DiskPage>)
-    fun writePage(page: DiskPage)
-    fun writePageSequence(startPageId: PageId = -1): Function<in DiskPage?, out DiskPage?>
+    /**
+     * Reads a single page with the given page ID.
+     */
+    fun read(pageId: PageId): DiskPage
 
-    fun createPage(): DiskPage
+    /**
+     * Reads a sequence of numPages pages starting from the given pageid. Calls a reader object for each page.
+     */
+    fun bulkRead(startPageId: PageId = -1, numPages: Int = 1, reader: Consumer<DiskPage>)
+
+    /**
+     * Writes a single page to the storage. The page location on the storage is defined by its id.
+     */
+    fun write(page: DiskPage)
+
+    /**
+     * Writes a sequence of pages at the location defined by startPageId.
+     *
+     * The returned function takes an instance of a disk page to be written and returns a new instance corresponding to
+     * the actual location where the page was written to. Passing `null` to the function indicates the end of write operation.
+     */
+    fun bulkWrite(startPageId: PageId): Function<in DiskPage?, out DiskPage?>
 
 
     val totalAccessCost: Double

@@ -16,7 +16,6 @@
 
 package net.barashev.dbi2022
 
-import net.barashev.dbi2022.createHardDriveEmulatorStorage
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -25,20 +24,20 @@ class StorageImplTest {
     @Test
     fun `create and read page`() {
         createHardDriveEmulatorStorage().let { storage ->
-            val pageId1 = storage.createPage().let {page ->
+            val pageId1 = storage.read(1).let { page ->
                 page.putRecord(TestRecord(1, 1).toByteArray())
-                storage.writePage(page)
+                storage.write(page)
                 page.id
             }
-            val pageId2 = storage.createPage().let {page ->
+            val pageId2 = storage.read(2).let { page ->
                 page.putRecord(TestRecord(2, 2).toByteArray())
-                storage.writePage(page)
+                storage.write(page)
                 page.id
             }
-            storage.readPage(pageId1).let {page ->
+            storage.read(pageId1).let { page ->
                 assertEquals(TestRecord(1,1), TestRecord.fromByteArray(page.getRecord(0).bytes))
             }
-            storage.readPage(pageId2).let {page ->
+            storage.read(pageId2).let { page ->
                 assertEquals(TestRecord(2,2), TestRecord.fromByteArray(page.getRecord(0).bytes))
             }
         }
@@ -48,16 +47,16 @@ class StorageImplTest {
     fun `create write and read page sequence`() {
         createHardDriveEmulatorStorage().let { storage ->
             val pageList = (1..10).map { idx ->
-                storage.createPage().also { page ->
+                storage.read(idx).also { page ->
                     page.putRecord(TestRecord(idx, idx).toByteArray())
                 }
             }.toList()
-            val writer = storage.writePageSequence()
+            val writer = storage.bulkWrite(11)
             val writtenPages = pageList.mapNotNull { writer.apply(it) }.toList()
             writer.apply(null)
 
             var idx = 1
-            storage.readPageSequence(writtenPages.first().id, writtenPages.size) { page ->
+            storage.bulkRead(writtenPages.first().id, writtenPages.size) { page ->
                 assertEquals(TestRecord(idx, idx), TestRecord.fromByteArray(page.getRecord(0).bytes))
                 idx++
             }
@@ -68,13 +67,13 @@ class StorageImplTest {
     fun `read and write random page`() {
         createHardDriveEmulatorStorage().let { storage ->
             repeat(42) {
-                storage.readPage(Random.nextInt(100)).let { page ->
+                storage.read(Random.nextInt(100)).let { page ->
                     page.putRecord(TestRecord(page.id, page.id).toByteArray())
-                    storage.writePage(page)
+                    storage.write(page)
                 }
             }
             (0..100).forEach {
-                storage.readPage(it).let {page ->
+                storage.read(it).let { page ->
                     if (page.allRecords().isNotEmpty()) {
                         assertEquals(TestRecord(page.id, page.id), TestRecord.fromByteArray(page.getRecord(0).bytes))
                     }

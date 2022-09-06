@@ -168,7 +168,7 @@ private class HardDiskEmulatorStorage: Storage {
     override val totalAccessCost: Double get() = accessCostMs
 
     private fun nextPageId() = if (pageMap.isEmpty()) 0 else pageMap.lastKey() + 1
-    override fun readPage(pageId: PageId): DiskPage =
+    override fun read(pageId: PageId): DiskPage =
         doReadPage(pageId).also {
             countRandomAccess(pageId)
         }
@@ -178,7 +178,7 @@ private class HardDiskEmulatorStorage: Storage {
             DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
         }.rawBytes)
 
-    override fun readPageSequence(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>) {
+    override fun bulkRead(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>) {
         val realStartPageId = if (startPageId == -1) nextPageId() else startPageId
         (realStartPageId until realStartPageId+numPages).forEach {
             reader.accept(doReadPage(it))
@@ -187,7 +187,7 @@ private class HardDiskEmulatorStorage: Storage {
         countSeqScan(numPages)
     }
 
-    override fun writePage(page: DiskPage) {
+    override fun write(page: DiskPage) {
         if (page.id < 0) {
             throw IllegalArgumentException("A disk page is supposed to have an ID")
         }
@@ -195,13 +195,7 @@ private class HardDiskEmulatorStorage: Storage {
         countRandomAccess(page.id)
     }
 
-    override fun createPage(): DiskPage {
-        val nextKey = nextPageId()
-        pageMap[nextKey] = DiskPageImpl(nextKey, DEFAULT_DISK_PAGE_SIZE)
-        return readPage(nextKey)
-    }
-
-    override fun writePageSequence(startPageId: PageId): Function<in DiskPage?, out DiskPage?> {
+    override fun bulkWrite(startPageId: PageId): Function<in DiskPage?, out DiskPage?> {
         var nextKey = if (startPageId == -1) nextPageId() else startPageId
         var numPages = 0
         countRandomAccess(nextKey)

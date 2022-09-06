@@ -16,10 +16,17 @@
 
 package net.barashev.dbi2022
 
+// --------------------------------------------------------------------------------------------------------------------
+// A collection of types and utilities for data serialization purposes.
+// --------------------------------------------------------------------------------------------------------------------
+
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.*
 
+/**
+ * Attribute type instances can serialize and deserialize values of corresponding types to and from byte arrays.
+ */
 sealed class AttributeType<T>(val byteSize: Int = -1) {
     val isFixedSize: Boolean = byteSize > 0
 
@@ -159,6 +166,9 @@ class DateAttribute: AttributeType<Date>(Long.SIZE_BYTES) {
 
 }
 fun dateField(value: Date = Date.from(Instant.EPOCH)) = DateAttribute() to value
+
+// --------------------------------------------------------------------------------------------------------------------
+// RecordN are n'ary tuples with typed components. Tuples can be serialized and deserialized to/from byte arrays.
 
 class Record1<T1: Any>(f1: Pair<AttributeType<T1>, T1>) {
     val type1 = f1.first

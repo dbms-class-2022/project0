@@ -53,11 +53,12 @@ interface AccessMethodManager {
     fun createTable(tableName: String, vararg columns: Triple<String, AttributeType<Any>, ColumnConstraint?>): Oid
 
     /**
-     * Adds a new page to the given table.
+     * Adds new pages to the given table. If more than 1 page is requested, their ids are sequential.
      *
+     * @return id of the first added page
      * @throws AccessMethodException if a page can't be added (e.g. because of catalog page overflow)
      */
     @Throws(AccessMethodException::class)
-    fun addPage(tableOid: Oid): PageId
+    fun addPage(tableOid: Oid, pageCount: Int = 1): PageId
 }
 

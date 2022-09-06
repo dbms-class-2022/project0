@@ -66,7 +66,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
 
 
     internal fun doLoad(startPageId: PageId, pageCount: Int, addPage: (page: DiskPage) -> CachedPageImpl) {
-        storage.readPageSequence(startPageId, pageCount) { diskPage ->
+        storage.bulkRead(startPageId, pageCount) { diskPage ->
             if (!cache.containsKey(diskPage.id)) {
                 addPage(diskPage)
             }
@@ -90,7 +90,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
         var cacheHit = true
         return cache.getOrElse(pageId) {
             cacheHit = false
-            addPage(storage.readPage(pageId))
+            addPage(storage.read(pageId))
         }.also {
             it.pinCount += pinIncrement
             recordCacheHit(cacheHit)
@@ -109,7 +109,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
     override fun createSubCache(size: Int): PageCache = SubcacheImpl(this, size)
 
     override fun flush() {
-        cache.forEach { (_, cachedPage) -> storage.writePage(cachedPage.diskPage) }
+        cache.forEach { (_, cachedPage) -> storage.write(cachedPage.diskPage) }
     }
 
     private fun evictCandidate(): CachedPageImpl {
@@ -119,7 +119,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
     }
 
     internal fun evict(cachedPage: CachedPageImpl) {
-        storage.writePage(cachedPage.diskPage)
+        storage.write(cachedPage.diskPage)
         cache.remove(cachedPage.diskPage.id)
     }
 }
@@ -169,7 +169,7 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
     }
 
     override fun flush() {
-        subcachePages.mapNotNull { mainCache.cache[it] }.forEach { page -> mainCache.storage.writePage(page.diskPage) }
+        subcachePages.mapNotNull { mainCache.cache[it] }.forEach { page -> mainCache.storage.write(page.diskPage) }
     }
 
     private fun evictCandidate(): CachedPageImpl =

@@ -25,9 +25,9 @@ class PageCacheImplTest {
     fun `basic test - cache loads pages from the storage and writes them back`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage)
-        val pageId = storage.createPage().also { page ->
+        val pageId = storage.read(1).also { page ->
             page.putRecord(TestRecord(1,1).toByteArray(), 0)
-            storage.writePage(page)
+            storage.write(page)
         }.id
 
         val cost = storage.totalAccessCost
@@ -36,7 +36,7 @@ class PageCacheImplTest {
             it.putRecord(TestRecord(2,2).toByteArray())
         }
         cache.flush()
-        assertEquals(TestRecord(2,2), TestRecord.fromByteArray(storage.readPage(pageId).getRecord(1).bytes))
+        assertEquals(TestRecord(2,2), TestRecord.fromByteArray(storage.read(pageId).getRecord(1).bytes))
         assertTrue(storage.totalAccessCost > cost)
     }
 
@@ -44,9 +44,9 @@ class PageCacheImplTest {
     fun `pin after load costs zero`() {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage)
-        val pageId = storage.createPage().also { page ->
+        val pageId = storage.read(1).also { page ->
             page.putRecord(TestRecord(1,1).toByteArray(), 0)
-            storage.writePage(page)
+            storage.write(page)
         }.id
         cache.load(pageId)
         val cost = storage.totalAccessCost
@@ -59,9 +59,9 @@ class PageCacheImplTest {
     fun `sequential load costs less than random gets`() {
         val storage = createHardDriveEmulatorStorage().also { storage ->
             (1 .. 20).forEach { idx ->
-                storage.readPage(idx).also { page ->
+                storage.read(idx).also { page ->
                     page.putRecord(TestRecord(idx, idx).toByteArray())
-                    storage.writePage(page)
+                    storage.write(page)
                 }
             }
         }
