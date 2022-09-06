@@ -28,23 +28,16 @@ internal class CachedPageImpl(
     private val evict: (CachedPageImpl)->Unit,
     var pinCount: Int = 1): CachedPage, DiskPage by diskPage {
 
-    override val isDirty: Boolean get() = usage.writeCount > 0
+    private var _isDirty = false
+    override val isDirty: Boolean get() = _isDirty
 
-    override var usage = CachedPageUsage(0, 0, System.currentTimeMillis(), -1)
+    override var usage = CachedPageUsage(0, System.currentTimeMillis())
     override fun putRecord(recordData: ByteArray, recordId: RecordId): PutRecordResult = diskPage.putRecord(recordData, recordId).also {
-        usage = CachedPageUsage(usage.readCount, usage.writeCount + 1, usage.lastReadTs, System.currentTimeMillis())
+        _isDirty = true
     }
 
     override fun deleteRecord(recordId: RecordId) = diskPage.deleteRecord(recordId).also {
-        usage = CachedPageUsage(usage.readCount, usage.writeCount + 1, usage.lastReadTs, System.currentTimeMillis())
-    }
-
-    override fun getRecord(recordId: RecordId): GetRecordResult = diskPage.getRecord(recordId).also {
-        usage = CachedPageUsage(usage.readCount + 1, usage.writeCount, System.currentTimeMillis(), usage.lastWriteTs)
-    }
-
-    override fun allRecords(): Map<RecordId, GetRecordResult> = diskPage.allRecords().also {
-        usage = CachedPageUsage(usage.readCount + 1, usage.writeCount, System.currentTimeMillis(), usage.lastWriteTs)
+        _isDirty = true
     }
 
     override fun close() {
@@ -54,6 +47,10 @@ internal class CachedPageImpl(
                 evict(this)
             }
         }
+    }
+
+    internal fun incrementUsage() {
+        usage = CachedPageUsage(usage.accessCount + 1, System.currentTimeMillis())
     }
 }
 
@@ -67,9 +64,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
 
     internal fun doLoad(startPageId: PageId, pageCount: Int, addPage: (page: DiskPage) -> CachedPageImpl) {
         storage.bulkRead(startPageId, pageCount) { diskPage ->
-            if (!cache.containsKey(diskPage.id)) {
-                addPage(diskPage)
-            }
+            cache[diskPage.id]?.incrementUsage() ?: addPage(diskPage)
         }
     }
 
@@ -94,6 +89,7 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
         }.also {
             it.pinCount += pinIncrement
             recordCacheHit(cacheHit)
+            it.incrementUsage()
         }
     }
 

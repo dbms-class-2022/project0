@@ -17,10 +17,8 @@
 package net.barashev.dbi2022
 
 data class CachedPageUsage(
-    val readCount: Int,
-    val writeCount: Int,
-    val lastReadTs: Long,
-    val lastWriteTs: Long
+    val accessCount: Int,
+    val lastAccessTs: Long,
 )
 
 /**
