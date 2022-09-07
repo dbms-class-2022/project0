@@ -14,34 +14,16 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+package net.barashev.dbi2022.task0;
 
-plugins {
-    kotlin("jvm") version "1.7.10"
-    java
-    application
-}
+import org.junit.jupiter.api.Test;
 
-group = "net.barashev.dbi2022"
-version = "1.0-SNAPSHOT"
+public class DumbTest {
+    @Test
+    public void testCreateTables() throws Exception {
+        var taskSetup = new TaskSetup();
+        taskSetup.populateTables();
 
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
-    testImplementation("net.datafaker:datafaker:1.5.0")
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-application {
-    //mainClass.set("MainKt")
+        System.out.println("Table initialization cost: " + taskSetup.storage.getTotalAccessCost());
+    }
 }
