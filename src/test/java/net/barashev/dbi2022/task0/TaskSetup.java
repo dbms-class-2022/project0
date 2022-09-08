@@ -24,6 +24,10 @@ import java.util.concurrent.TimeUnit;
 
 import static net.barashev.dbi2022.StorageImplKt.createHardDriveEmulatorStorage;
 
+/**
+ * This code creates two tables table1(id, address, weather) and table2(id, date, buzzwords) and
+ * populates them with some data.
+ */
 public class TaskSetup {
     Storage storage = createHardDriveEmulatorStorage();
     PageCache cache = new SimplePageCacheImpl(storage, 20);
@@ -68,10 +72,11 @@ public class TaskSetup {
 
     void populatePage2(CachedPage table2page) {
         do {
-            var putResult = table2page.putRecord(new Record3(
+            var record = new Record3(
                     RecordsKt.intField(Random.Default.nextInt(1, table1Id)),
                     RecordsKt.dateField(faker.date().future(3650, TimeUnit.DAYS)),
-                    RecordsKt.stringField(faker.marketing().buzzwords())).asBytes(), -1);
+                    RecordsKt.stringField(faker.marketing().buzzwords()));
+            var putResult = table2page.putRecord(record.asBytes(), -1);
             table1Id++;
             if (putResult.isOutOfSpace()) {
                 return;

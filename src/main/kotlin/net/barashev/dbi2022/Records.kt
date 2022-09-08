@@ -290,6 +290,10 @@ class Record3<T1: Any, T2: Any, T3: Any>(
         return result
     }
 
+    override fun toString(): String {
+        return "Record3(type1=$type1, value1=$value1, type2=$type2, value2=$value2, type3=$type3, value3=$value3)"
+    }
+
 
 }
 
