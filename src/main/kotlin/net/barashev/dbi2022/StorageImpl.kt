@@ -60,7 +60,7 @@ private class DiskPageImpl(
             PutRecordResult(recordId, isOutOfSpace = false, isOutOfRange = true)
         } else {
             if (recordId == directorySize) {
-                if (recordData.size > freeSpace + Int.SIZE_BYTES) {
+                if ((recordData.size + Int.SIZE_BYTES) > freeSpace) {
                     PutRecordResult(recordId, isOutOfSpace = true, isOutOfRange = false)
                 } else {
                     val newLastRecordOffset = lastRecordOffset - recordData.size
