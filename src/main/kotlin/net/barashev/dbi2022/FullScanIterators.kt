@@ -43,7 +43,10 @@ internal abstract class FullScanIteratorBase<T>(
                 currentRecord = null
                 return
             }
-            currentPageRecords = nextPage.allRecords().filterValues { it.isOk }.mapValues { recordBytesParser.apply(it.value.bytes) }
+            currentPageRecords =
+                nextPage.allRecords().let {records ->
+                    records.filterValues { it.isOk }.mapValues { recordBytesParser.apply(it.value.bytes) }
+                }
             currentRecordIdx = 0
             advance()
             return
@@ -95,8 +98,6 @@ internal class FullScanIteratorImpl<T>(
     private val rootRecords: Iterator<OidPageidRecord>,
     recordBytesParser: Function<ByteArray, T>): FullScanIteratorBase<T>(recordBytesParser) {
 
-    private var currentPage: CachedPage? = null
-
     init {
         advance()
     }
@@ -110,16 +111,6 @@ internal class FullScanIteratorImpl<T>(
         }
         return null
     }
-
-    fun seekFirstPage(filter: java.util.function.Predicate<CachedPage>): CachedPage? {
-        do {
-            val page = advancePage() ?: return null
-            if (filter.test(page)) {
-                return page
-            }
-            currentPage = page
-        } while (true)
-    }
 }
 
 /**
@@ -131,7 +122,7 @@ class FullScanAccessImpl<T>(
     private val rootRecords: Iterator<OidPageidRecord>,
     private val recordBytesParser: Function<ByteArray, T>): Iterable<T> {
     override fun iterator(): Iterator<T> = iteratorImpl()
-    internal fun iteratorImpl() = FullScanIteratorImpl(pageCache, tableOid, rootRecords, recordBytesParser)
+    private fun iteratorImpl() = FullScanIteratorImpl(pageCache, tableOid, rootRecords, recordBytesParser)
 }
 
 /**

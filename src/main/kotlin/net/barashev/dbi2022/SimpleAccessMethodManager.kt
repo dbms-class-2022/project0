@@ -81,24 +81,32 @@ internal class TableOidMapping(
 
     fun create(tableName: String): Oid {
         val nextOid = nextTableOid()
-        val record = OidNameRecord(intField(), stringField(tableName))
+        val record = OidNameRecord(intField(nextOid), stringField(tableName))
         val bytes = record.asBytes()
-        val availablePageId = createAccess().iteratorImpl().seekFirstPage {
-            it.freeSpace > bytes.size + it.recordHeaderSize
-        }?.id ?: tablePageDirectory.add(NAME_SYSTABLE_OID)
-        pageCache.getAndPin(availablePageId).use {page ->
-            page.putRecord(bytes)
+
+        val isOk = tablePageDirectory.pages(NAME_SYSTABLE_OID).firstOrNull { oidPageId ->
+            pageCache.getAndPin(oidPageId.value2).use { nameTablePage ->
+                nameTablePage.putRecord(bytes).isOk
+            }
+        } != null
+        if (!isOk) {
+            tablePageDirectory.add(NAME_SYSTABLE_OID).let {
+                pageCache.getAndPin(it).use { nameTablePage ->
+                    nameTablePage.putRecord(bytes).isOk
+                }
+            }
         }
-        cachedMapping[tableName] = nextOid
-        return nextOid
+        return nextOid.also {
+            cachedMapping[tableName] = it
+        }
     }
 
     private fun nextTableOid(): Oid {
-        var maxOid = NAME_SYSTABLE_OID + 1
+        var maxOid = NAME_SYSTABLE_OID
         createAccess().forEach {
             maxOid = maxOf(maxOid, it.value1)
         }
-        return maxOid
+        return maxOid + 1
     }
 
 }
