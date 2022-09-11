@@ -19,6 +19,7 @@ package net.barashev.dbi2022
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class AccessMethodManagerTest {
     @Test
@@ -55,8 +56,30 @@ class AccessMethodManagerTest {
             Record2(intField(), stringField()).fromBytes(it)
         }
         assertEquals(listOf(Record2(intField(42), stringField("Hello world"))), fullScan.toList())
-
     }
 
+    @Test
+    fun `add two tables`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 20)
+        val catalog = SimpleAccessMethodManager(cache)
+        val table1Oid = catalog.createTable("table1").also {
+            cache.getAndPin(catalog.addPage(it)).use { dataPage ->
+                dataPage.putRecord(Record2(intField(42), stringField("Hello world")).asBytes())
+            }
+        }
+        val table2Oid = catalog.createTable("table2").also {
+            cache.getAndPin(catalog.addPage(it)).use { dataPage ->
+                dataPage.putRecord(Record2(stringField("Another brick in the wall"), booleanField(true)).asBytes())
+            }
+        }
+        assertNotEquals(table1Oid, table2Oid)
+        assertEquals(1, catalog.createFullScan("table1") {
+            Record2(intField(), stringField()).fromBytes(it)
+        }.toList().size)
+        assertEquals(1, catalog.createFullScan("table2") {
+            Record2(stringField(), booleanField()).fromBytes(it)
+        }.toList().size)
+    }
 
 }
