@@ -16,13 +16,24 @@
 
 package net.barashev.dbi2022.task0;
 
+import net.barashev.dbi2022.Record3;
 import org.junit.jupiter.api.Test;
+
+import java.util.Date;
+import java.util.Iterator;
+
+import static net.barashev.dbi2022.task0.JoinKt.simpleNestedLoopJoin;
 
 public class DumbTest {
     @Test
     public void testCreateTables() throws Exception {
         var taskSetup = new TaskSetup();
         taskSetup.populateTables();
+        Iterator<Record3<Integer, Date, String>> iterator = simpleNestedLoopJoin(taskSetup).iterator();
+        while (iterator.hasNext()) {
+            Record3<Integer, Date, String> record = iterator.next();
+            System.out.println(record.getValue1() + " " + record.getValue2() + " " + record.getValue3());
+        }
 
         System.out.println("Table initialization cost: " + taskSetup.storage.getTotalAccessCost());
     }
