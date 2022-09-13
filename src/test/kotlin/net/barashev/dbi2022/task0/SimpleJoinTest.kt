@@ -17,21 +17,23 @@ class SimpleJoinTest {
 
         val catalog = taskSetup.accessManager
 
-        val table1Scan = catalog.createFullScan("table1") { bytes ->
-            Record3(intField(), stringField(), stringField()).fromBytes(bytes).toT1Record()
-        }
+        // filter table2 first to iterate and scan table1 less often
+        val table2Scan = catalog.createFullScan("table2") { bytes ->
+            Record3(intField(), dateField(), stringField()).fromBytes(bytes).toT2Record()
+        }.asSequence() // Sequence-s helps to avoid storing scanned records in RAM
+        val filteredTable2Scan = table2Scan.filter { it.date.myYear == 2024 }
 
-        val joinResult = table1Scan.flatMap { t1Record ->
-            val table2Scan = catalog.createFullScan("table2") { bytes ->
-                Record3(intField(), dateField(), stringField()).fromBytes(bytes).toT2Record()
-            }
-            table2Scan.filter { t2Record ->
-                t2Record.id == t1Record.id && t2Record.date.myYear == 2024
-            }.map { t2Record ->
-                Record3(intField(t1Record.id), dateField(t2Record.date), stringField(t1Record.weather))
-            }
+        val joinResult = filteredTable2Scan.flatMap { t2Record ->
+            val table1Scan = catalog.createFullScan("table1") { bytes ->
+                Record3(intField(), stringField(), stringField()).fromBytes(bytes).toT1Record()
+            }.asSequence()
+            table1Scan
+                .filter { t1Record -> t1Record.id == t2Record.id }
+                .map { t1Record ->
+                    Record3(intField(t1Record.id), dateField(t2Record.date), stringField(t1Record.weather))
+                }
         }
-        println(resultsAsPostrgesqlOutput(joinResult))
+        println(resultsAsPostrgesqlOutput(joinResult.toList()))
         println("Total test cost: " + taskSetup.storage.totalAccessCost)
     }
 
