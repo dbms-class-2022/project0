@@ -29,14 +29,17 @@ class Task0 {
             Record3(intField(), dateField(), stringField()).fromBytes(it)
         }.asSequence()
 
-        val result = getTable1Records().flatMap { (id1, _, weather1) ->
-            getTable2Records().filter { (id2, date2, _) ->
-                id1 == id2 && date2.myYear == 2024
-            }.map { (_, date2, _) -> Record3(intField(id1), dateField(date2), stringField(weather1)) }
-        }
+        val result = getTable2Records().filter { (_, date2, _) ->
+            date2.myYear == 2024
+        }.flatMap { (id2, date2, _) ->
+            getTable1Records()
+                .filter { (id1, _, _) -> id1 == id2 }
+                .map { (id1, _, weather1) -> Record3(intField(id1), dateField(date2), stringField(weather1)) }
+        }.toList() // just to get the size
 
         result.forEach { println(it) }
-        println("Total cost: ${taskSetup.storage.totalAccessCost}")
+        println("Row count: " + result.size)
+        println("Total cost: " + taskSetup.storage.totalAccessCost)
     }
 
 }
