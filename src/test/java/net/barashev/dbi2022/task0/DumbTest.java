@@ -24,6 +24,8 @@ public class DumbTest {
         var taskSetup = new TaskSetup();
         taskSetup.populateTables();
 
+        DumbTestQueryKt.executeDumbTestQuery(taskSetup);
+
         System.out.println("Table initialization cost: " + taskSetup.storage.getTotalAccessCost());
     }
 }
