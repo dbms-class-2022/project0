@@ -54,8 +54,12 @@ internal class CachedPageImpl(
     }
 }
 
-class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSize: Int = -1): PageCache {
-    internal val statsImpl = StatsImpl()
+/**
+ * This class implements a simple FIFO-like page cache. It is open, that is, allows for subclassing and overriding
+ * some methods.
+ */
+open class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSize: Int = -1): PageCache {
+    private val statsImpl = StatsImpl()
     override val stats: PageCacheStats get() = statsImpl
     internal val cache = mutableMapOf<PageId, CachedPageImpl>()
 
@@ -64,38 +68,38 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
 
     internal fun doLoad(startPageId: PageId, pageCount: Int, addPage: (page: DiskPage) -> CachedPageImpl) {
         storage.bulkRead(startPageId, pageCount) { diskPage ->
-            cache[diskPage.id]?.incrementUsage() ?: addPage(diskPage)
+            val cachedPage = cache[diskPage.id] ?: addPage(diskPage)
+            // We do not record cache hit or cache miss because load is a bulk operation and most likely it loads the
+            // pages which are not yet cached. Recording cache miss will skew the statistics.
+            onPageRequest(cachedPage, null)
         }
     }
 
     override fun get(pageId: PageId): CachedPage = doGetAndPin(
         pageId,
-        { cacheHit -> if (cacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1 },
         this::doAddPage,
         0
     )
 
     override fun getAndPin(pageId: PageId): CachedPage = doGetAndPin(
         pageId,
-        { cacheHit -> if (cacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1 },
         this::doAddPage
     )
 
-    internal fun doGetAndPin(pageId: PageId, recordCacheHit: (Boolean) -> Unit, addPage: (page: DiskPage) -> CachedPageImpl, pinIncrement: Int = 1): CachedPageImpl {
+    internal fun doGetAndPin(pageId: PageId, addPage: (page: DiskPage) -> CachedPageImpl, pinIncrement: Int = 1): CachedPageImpl {
         var cacheHit = true
         return cache.getOrElse(pageId) {
             cacheHit = false
             addPage(storage.read(pageId))
         }.also {
+            onPageRequest(it, isCacheHit = cacheHit)
             it.pinCount += pinIncrement
-            recordCacheHit(cacheHit)
-            it.incrementUsage()
         }
     }
 
     private fun doAddPage(page: DiskPage): CachedPageImpl {
         if (cache.size == maxCacheSize) {
-            evict(evictCandidate())
+            evict(getEvictCandidate())
         }
         return CachedPageImpl(page, this::evict, 0).also {
             cache[page.id] = it
@@ -108,15 +112,25 @@ class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSiz
         cache.forEach { (_, cachedPage) -> storage.write(cachedPage.diskPage) }
     }
 
-    private fun evictCandidate(): CachedPageImpl {
+    internal fun evict(cachedPage: CachedPageImpl) {
+        storage.write(cachedPage.diskPage)
+        cache.remove(cachedPage.diskPage.id)
+    }
+
+    private fun recordCacheHit(isCacheHit: Boolean) =
+        if (isCacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1
+
+    // -------------------------------------------------------------------------------------------------------------
+    // Override these functions to implement custom page replacement policy
+    internal open fun getEvictCandidate(): CachedPageImpl {
         return cache.values.firstOrNull {
             it.pinCount == 0
         } ?: throw IllegalStateException("All pages are pinned, there is no victim for eviction")
     }
 
-    internal fun evict(cachedPage: CachedPageImpl) {
-        storage.write(cachedPage.diskPage)
-        cache.remove(cachedPage.diskPage.id)
+    internal open fun onPageRequest(page: CachedPageImpl, isCacheHit: Boolean?) {
+        isCacheHit?.let(this::recordCacheHit)
+        page.incrementUsage()
     }
 }
 
@@ -132,19 +146,9 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
 
     override fun getAndPin(pageId: PageId): CachedPage = doGetAndPin(pageId, 1)
     private fun doGetAndPin(pageId: PageId, pinIncrement: Int): CachedPage {
-        var localCacheHit = subcachePages.contains(pageId)
+        val localCacheHit = subcachePages.contains(pageId)
         if (localCacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1
-        return mainCache.doGetAndPin(
-            pageId,
-            { cacheHit ->
-                if (cacheHit) {
-                    mainCache.statsImpl.cacheHitCount += 1
-                } else {
-                    mainCache.statsImpl.cacheMissCount += 1
-                }
-            },
-            this::doAddPage,
-            pinIncrement)
+        return mainCache.doGetAndPin(pageId, this::doAddPage, pinIncrement)
     }
 
     private fun doAddPage(page: DiskPage): CachedPageImpl {
@@ -161,7 +165,7 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
     }
 
     override fun createSubCache(size: Int): PageCache {
-        TODO("Not yet implemented")
+        error("Not supposed to be called")
     }
 
     override fun flush() {
@@ -171,7 +175,7 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
     private fun evictCandidate(): CachedPageImpl =
         mainCache.cache[subcachePages.first()]!!
 
-    internal fun evict(cachedPage: CachedPageImpl) {
+    private fun evict(cachedPage: CachedPageImpl) {
         subcachePages.remove(cachedPage.diskPage.id)
     }
 
