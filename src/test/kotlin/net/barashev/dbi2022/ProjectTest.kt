@@ -32,10 +32,7 @@ class ProjectTest {
                 calendar.time = it.value2
                 it.value1 == record1.value1 && calendar.get(Calendar.YEAR) == 2024
             }
-
-            table2.forEach {
-                println("$record1.value1 $it.value2 $record1.value3")
-            }
+                .forEach{ println("${record1.value1} ${it.value2} ${record1.value3}") }
         }
 
         println(taskSetup.storage.totalAccessCost)
