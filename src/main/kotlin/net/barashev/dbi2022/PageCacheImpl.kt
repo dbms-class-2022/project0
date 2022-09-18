@@ -23,12 +23,12 @@ internal data class StatsImpl(var cacheHitCount: Int = 0, var cacheMissCount: In
         get() = cacheMissCount
 }
 
-internal class CachedPageImpl(
+internal open class CachedPageImpl(
     internal val diskPage: DiskPage,
     private val evict: (CachedPageImpl)->Unit,
     var pinCount: Int = 1): CachedPage, DiskPage by diskPage {
 
-    private var _isDirty = false
+    internal var _isDirty = false
     override val isDirty: Boolean get() = _isDirty
 
     override var usage = CachedPageUsage(0, System.currentTimeMillis())
@@ -43,9 +43,6 @@ internal class CachedPageImpl(
     override fun close() {
         if (pinCount > 0) {
             pinCount -= 1
-            if (pinCount == 0) {
-                evict(this)
-            }
         }
     }
 
@@ -109,17 +106,23 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
     override fun createSubCache(size: Int): PageCache = SubcacheImpl(this, size)
 
     override fun flush() {
-        cache.forEach { (_, cachedPage) -> storage.write(cachedPage.diskPage) }
+        cache.forEach { (_, cachedPage) -> cachedPage.write() }
     }
 
     internal fun evict(cachedPage: CachedPageImpl) {
-        storage.write(cachedPage.diskPage)
+        cachedPage.write()
         cache.remove(cachedPage.diskPage.id)
     }
 
     private fun recordCacheHit(isCacheHit: Boolean) =
         if (isCacheHit) statsImpl.cacheHitCount += 1 else statsImpl.cacheMissCount += 1
 
+    private fun CachedPageImpl.write() {
+        if (this.isDirty) {
+            storage.write(this.diskPage)
+        }
+        this._isDirty = false
+    }
     // -------------------------------------------------------------------------------------------------------------
     // Override these functions to implement custom page replacement policy
     internal open fun getEvictCandidate(): CachedPageImpl {

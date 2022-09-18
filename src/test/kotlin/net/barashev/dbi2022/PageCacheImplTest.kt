@@ -86,7 +86,7 @@ class PageCacheImplTest {
         val cost2 = storage.totalAccessCost
         assertEquals(1, cache.stats.cacheMiss)
 
-        (1..5).forEach { cache.getAndPin(it) }
+        (5 downTo 1).forEach { cache.getAndPin(it) }
         val cost3 = storage.totalAccessCost
         assertEquals(4, cache.stats.cacheHit)
         assertEquals(2, cache.stats.cacheMiss)
