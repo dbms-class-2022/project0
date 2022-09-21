@@ -33,7 +33,7 @@ class FullScanIteratorImplTest {
         val storage = createHardDriveEmulatorStorage()
         val cache = SimplePageCacheImpl(storage, 20)
         val rootRecords = RootRecords(cache, 0, 1)
-        assertTrue(FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords.iterator()) {
+        assertTrue(FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
             error("Not expected to be here")
         }.toList().isEmpty())
     }
@@ -44,7 +44,7 @@ class FullScanIteratorImplTest {
         val cache = SimplePageCacheImpl(storage, 20)
         createRootRecords(cache)
         val rootRecords = RootRecords(cache, 0, 1)
-        assertTrue(FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords.iterator()) {
+        assertTrue(FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
             error("Not expected to be here")
         }.toList().isEmpty())
     }
@@ -61,7 +61,7 @@ class FullScanIteratorImplTest {
         }
         assertEquals(
             listOf("table2", "table3"),
-            FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords.iterator()) {
+            FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
                 OidNameRecord(intField(), stringField()).fromBytes(it)
             }.map { it.value2 }.toList()
         )
@@ -86,11 +86,9 @@ class FullScanIteratorImplTest {
         }
         assertEquals(
             listOf("table2", "table3", "table4", "table5"),
-            FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords.iterator()) {
+            FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
                 OidNameRecord(intField(), stringField()).fromBytes(it)
             }.map { it.value2 }.toList()
         )
-
     }
-
 }

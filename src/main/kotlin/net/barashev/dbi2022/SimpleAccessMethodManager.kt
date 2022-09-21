@@ -66,7 +66,7 @@ internal class TableOidMapping(
     private val cachedMapping = mutableMapOf<String, Oid?>()
 
     private fun createAccess(): FullScanAccessImpl<OidNameRecord> =
-        FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()) {
+        FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, {tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()}) {
             OidNameRecord(intField(), stringField()).fromBytes(it)
         }
 
@@ -117,7 +117,7 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
     private val tableOidMapping = TableOidMapping(pageCache, tablePageDirectory)
 
     private fun <T> createFullScan(tableOid: Oid, recordBytesParser: Function<ByteArray, T>) =
-        FullScanAccessImpl(pageCache, tableOid, RootRecordIteratorImpl(pageCache, tableOid, 1), recordBytesParser)
+        FullScanAccessImpl(pageCache, tableOid, { RootRecordIteratorImpl(pageCache, tableOid, 1) }, recordBytesParser)
 
     override fun <T> createFullScan(tableName: String, recordBytesParser: Function<ByteArray, T>) =
         tableOidMapping.get(tableName)

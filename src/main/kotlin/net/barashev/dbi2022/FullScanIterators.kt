@@ -119,10 +119,10 @@ internal class FullScanIteratorImpl<T>(
 class FullScanAccessImpl<T>(
     private val pageCache: PageCache,
     private val tableOid: Oid,
-    private val rootRecords: Iterator<OidPageidRecord>,
+    private val rootRecords: () -> Iterator<OidPageidRecord>,
     private val recordBytesParser: Function<ByteArray, T>): Iterable<T> {
     override fun iterator(): Iterator<T> = iteratorImpl()
-    private fun iteratorImpl() = FullScanIteratorImpl(pageCache, tableOid, rootRecords, recordBytesParser)
+    private fun iteratorImpl() = FullScanIteratorImpl(pageCache, tableOid, rootRecords(), recordBytesParser)
 }
 
 /**

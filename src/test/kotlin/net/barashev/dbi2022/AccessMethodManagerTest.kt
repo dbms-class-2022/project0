@@ -82,4 +82,23 @@ class AccessMethodManagerTest {
         }.toList().size)
     }
 
+    @Test
+    fun `iterate over the same full scan twice`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 20)
+        val catalog = SimpleAccessMethodManager(cache)
+        catalog.createTable("table1").also {oid ->
+            cache.getAndPin(catalog.addPage(oid)).use { dataPage ->
+                (1..20).forEach {
+                    dataPage.putRecord(Record2(intField(it), stringField("Hello world")).asBytes())
+                }
+            }
+        }
+        val fullScan = catalog.createFullScan("table1") {
+            Record2(intField(), stringField()).fromBytes(it)
+        }
+        assertEquals((1..20).toList(), fullScan.map { it.value1 }.toList())
+        assertEquals((1..20).toList(), fullScan.map { it.value1 }.toList())
+    }
+
 }
