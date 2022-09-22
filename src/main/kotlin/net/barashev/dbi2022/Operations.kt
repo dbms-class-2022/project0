@@ -24,7 +24,7 @@ import java.util.function.Function
  *
  *
  */
-interface MultiwayMergeSort {
+interface MultiwayMergeSort : AutoCloseable {
     /**
      * Sorts a table with the name tableName by values extracted from the table records with comparableValue function.
      *
@@ -32,6 +32,11 @@ interface MultiwayMergeSort {
      *          to delete the output table when it is not needed anymore.
      */
     fun <T> sort(tableName: String, comparableValue: Function<ByteArray, Comparable<in T>>): String
+
+    /**
+     * Releases all the temporary resources, such as intermediate tables, except for the output table.
+     */
+    override fun close() {}
 }
 
 /**
@@ -40,16 +45,24 @@ interface MultiwayMergeSort {
  */
 data class Bucket(val num: Int, val tableName: String, val pageCount: Int)
 
-interface Hashtable {
+interface Hashtable : AutoCloseable {
     /**
      * Hashes the input table records using bucketCount buckets and keys returned by hashKey function.
      * @return a list of created buckets metadata, in the ascending order of bucket numbers.
      */
     fun <T> hash(tableName: String, bucketCount: Int, hashKey: Function<ByteArray, T>): List<Bucket>
+
+    /**
+     * Releases all the temporary resources, such as intermediate tables.
+     */
+    override fun close() {}
 }
 
 
 object Operations {
+    /**
+     * Creates an instance of MultiwayMergeSort using the passed access method manager and page cache.
+     */
     var sortFactory: (AccessMethodManager, PageCache) -> MultiwayMergeSort = { _, _  ->
         object : MultiwayMergeSort {
             override fun <T> sort(tableName: String, comparableValue: Function<ByteArray, Comparable<in T>>): String {
@@ -58,6 +71,9 @@ object Operations {
         }
     }
 
+    /**
+     * Creates an instance of a hashtable using the passed access method manager and page cache.
+     */
     var hashFactory: (AccessMethodManager, PageCache) -> Hashtable = { _, _ ->
         object : Hashtable {
             override fun <T> hash(tableName: String, bucketCount: Int, hashKey: Function<ByteArray, T>): List<Bucket> {
