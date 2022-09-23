@@ -31,6 +31,15 @@ interface ColumnConstraint {}
 class AccessMethodException(message: String): Exception(message)
 
 /**
+ * Full scan object can iterate over table pages and records.
+ * As Iterable, it creates an iterator over table records.
+ * One can iterate over pages using pages() function.
+ */
+interface FullScan<T> : Iterable<T> {
+    fun pages(): Iterable<CachedPage>
+}
+
+/**
  * This interface provides an abstraction over basic physical operations with tables.
  * This is pretty low-level abstraction, e.g. it leaves the process of (de)serialization records from and to bytes
  * to the client. However, it hides the details of storing table metadata and implementations of table page iterators.
@@ -42,7 +51,7 @@ interface AccessMethodManager {
      * @throws AccessMethodException if the requested table can't be found in the catalog.
      */
     @Throws(AccessMethodException::class)
-    fun <T> createFullScan(tableName: String, recordBytesParser: Function<ByteArray, T>): Iterable<T>
+    fun <T> createFullScan(tableName: String, recordBytesParser: Function<ByteArray, T>): FullScan<T>
 
     /**
      * Creates an empty table with the given name and writes appropriate records into the catalog.

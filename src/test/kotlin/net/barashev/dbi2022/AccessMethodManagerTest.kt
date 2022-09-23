@@ -101,4 +101,18 @@ class AccessMethodManagerTest {
         assertEquals((1..20).toList(), fullScan.map { it.value1 }.toList())
     }
 
+    @Test
+    fun `iterate over table pages`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 20)
+        val catalog = SimpleAccessMethodManager(cache)
+        val tableOid = catalog.createTable("table1")
+        (1..10).forEach {
+            cache.getAndPin(catalog.addPage(tableOid)).use { dataPage ->
+                dataPage.putRecord(Record2(intField(42), stringField("Hello world")).asBytes())
+            }
+        }
+        assertEquals(10, catalog.createFullScan("table1") {}.pages().count())
+    }
+
 }

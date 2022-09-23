@@ -93,16 +93,38 @@ internal class RootRecordIteratorImpl(
  * the supplied root records iterator, by filtering records with the specified table OID.
  */
 internal class FullScanIteratorImpl<T>(
-    private val pageCache: PageCache,
-    private val tableOid: Oid,
-    private val rootRecords: Iterator<OidPageidRecord>,
+    pageCache: PageCache,
+    tableOid: Oid,
+    rootRecords: Iterator<OidPageidRecord>,
     recordBytesParser: Function<ByteArray, T>): FullScanIteratorBase<T>(recordBytesParser) {
+
+    private val pageIterator = PageIteratorImpl(pageCache, tableOid, rootRecords)
 
     init {
         advance()
     }
+    override fun advancePage(): CachedPage? =
+        if (pageIterator.hasNext()) {
+            pageIterator.next()
+        } else null
 
-    override fun advancePage(): CachedPage? {
+}
+
+internal class PageIteratorImpl(private val pageCache: PageCache,
+                                private val tableOid: Oid,
+                                private val rootRecords: Iterator<OidPageidRecord>): Iterator<CachedPage> {
+
+    private var currentPage: CachedPage? = null
+    init {
+        currentPage = advancePage()
+    }
+    override fun hasNext(): Boolean = currentPage != null
+
+    override fun next(): CachedPage {
+        return currentPage!!.also { currentPage = advancePage() }
+    }
+
+    private fun advancePage(): CachedPage? {
         while (rootRecords.hasNext()) {
             val nextOidPageidRecord = rootRecords.next()
             if (nextOidPageidRecord.value1 == tableOid) {
@@ -120,10 +142,19 @@ class FullScanAccessImpl<T>(
     private val pageCache: PageCache,
     private val tableOid: Oid,
     private val rootRecords: () -> Iterator<OidPageidRecord>,
-    private val recordBytesParser: Function<ByteArray, T>): Iterable<T> {
+    private val recordBytesParser: Function<ByteArray, T>): FullScan<T> {
     override fun iterator(): Iterator<T> = iteratorImpl()
     private fun iteratorImpl() = FullScanIteratorImpl(pageCache, tableOid, rootRecords(), recordBytesParser)
+
+    override fun pages(): Iterable<CachedPage> = PagesIterable(pageCache, tableOid, rootRecords)
 }
+
+class PagesIterable(private val pageCache: PageCache,
+                    private val tableOid: Oid,
+                    private val rootRecords: () -> Iterator<OidPageidRecord>): Iterable<CachedPage> {
+    override fun iterator(): Iterator<CachedPage> = PageIteratorImpl(pageCache, tableOid, rootRecords())
+}
+
 
 /**
  * Iterable wrapper for creating root records iterator instances.
