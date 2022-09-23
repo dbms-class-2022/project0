@@ -16,7 +16,11 @@
 
 package net.barashev.dbi2022.task0;
 
+import kotlin.sequences.Sequence;
+import net.barashev.dbi2022.Record3;
 import org.junit.jupiter.api.Test;
+
+import java.util.Date;
 
 public class DumbTest {
     @Test
@@ -25,5 +29,19 @@ public class DumbTest {
         taskSetup.populateTables();
 
         System.out.println("Table initialization cost: " + taskSetup.storage.getTotalAccessCost());
+    }
+
+    @Test
+    public void testJoinCost() throws Exception {
+        var taskSetup = new TaskSetup();
+        taskSetup.populateTables();
+
+        Sequence<Record3<Integer, Date, String>> resultSequence = DumbJoinKt.makeDumbJoin(taskSetup);
+        var iter = resultSequence.iterator();
+
+        while (iter.hasNext()) {
+            Record3<Integer, Date, String> record = iter.next();
+            System.out.println(record.getValue1() + " " + record.getValue2() + " " + record.getValue3());
+        }
     }
 }
