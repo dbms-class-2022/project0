@@ -25,7 +25,6 @@ internal data class StatsImpl(var cacheHitCount: Int = 0, var cacheMissCount: In
 
 internal open class CachedPageImpl(
     internal val diskPage: DiskPage,
-    private val evict: (CachedPageImpl)->Unit,
     var pinCount: Int = 1): CachedPage, DiskPage by diskPage {
 
     internal var _isDirty = false
@@ -58,7 +57,8 @@ internal open class CachedPageImpl(
 open class SimplePageCacheImpl(internal val storage: Storage, private val maxCacheSize: Int = -1): PageCache {
     private val statsImpl = StatsImpl()
     override val stats: PageCacheStats get() = statsImpl
-    internal val cache = mutableMapOf<PageId, CachedPageImpl>()
+    internal val cacheArray = mutableListOf<CachedPageImpl>()
+    internal val cache get() = cacheArray.associateBy { it.id }
 
     override fun load(startPageId: PageId, pageCount: Int) = doLoad(startPageId, pageCount, this::doAddPage)
 
@@ -95,12 +95,13 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
     }
 
     private fun doAddPage(page: DiskPage): CachedPageImpl {
+        val result = CachedPageImpl(page, 0)
         if (cache.size == maxCacheSize) {
-            evict(getEvictCandidate())
+            swap(getEvictCandidate(), result)
+        } else {
+            this.cacheArray.add(result)
         }
-        return CachedPageImpl(page, this::evict, 0).also {
-            cache[page.id] = it
-        }
+        return result
     }
 
     override fun createSubCache(size: Int): PageCache = SubcacheImpl(this, size)
@@ -109,9 +110,10 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
         cache.forEach { (_, cachedPage) -> cachedPage.write() }
     }
 
-    internal fun evict(cachedPage: CachedPageImpl) {
-        cachedPage.write()
-        cache.remove(cachedPage.diskPage.id)
+    internal fun swap(victim: CachedPageImpl, newPage: CachedPageImpl) {
+        victim.write()
+        val idx = cacheArray.indexOf(victim)
+        cacheArray[idx] = newPage
     }
 
     private fun recordCacheHit(isCacheHit: Boolean) =
@@ -155,16 +157,17 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
     }
 
     private fun doAddPage(page: DiskPage): CachedPageImpl {
+        val result = CachedPageImpl(page, 0)
         if (subcachePages.size == maxCacheSize) {
             evictCandidate().let {
-                mainCache.evict(it)
+                mainCache.swap(it, result)
                 subcachePages.remove(it.diskPage.id)
             }
+        } else {
+            mainCache.cacheArray.add(result)
         }
-        return CachedPageImpl(page, this::evict, 0).also {
-            mainCache.cache[page.id] = it
-            subcachePages.add(page.id)
-        }
+        subcachePages.add(page.id)
+        return result
     }
 
     override fun createSubCache(size: Int): PageCache {
@@ -177,10 +180,4 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
 
     private fun evictCandidate(): CachedPageImpl =
         mainCache.cache[subcachePages.first()]!!
-
-    private fun evict(cachedPage: CachedPageImpl) {
-        subcachePages.remove(cachedPage.diskPage.id)
-    }
-
-
 }

@@ -19,12 +19,14 @@ package net.barashev.dbi2022
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
+private fun createCache(storage: Storage, maxCacheSize: Int = -1): PageCache = SimplePageCacheImpl(storage, maxCacheSize)
 class PageCacheImplTest {
     @Test
     fun `basic test - cache loads pages from the storage and writes them back`() {
         val storage = createHardDriveEmulatorStorage()
-        val cache = SimplePageCacheImpl(storage)
+        val cache = createCache(storage)
         val pageId = storage.read(1).also { page ->
             page.putRecord(TestRecord(1,1).toByteArray(), 0)
             storage.write(page)
@@ -43,7 +45,7 @@ class PageCacheImplTest {
     @Test
     fun `pin after load costs zero`() {
         val storage = createHardDriveEmulatorStorage()
-        val cache = SimplePageCacheImpl(storage)
+        val cache = createCache(storage)
         val pageId = storage.read(1).also { page ->
             page.putRecord(TestRecord(1,1).toByteArray(), 0)
             storage.write(page)
@@ -65,7 +67,7 @@ class PageCacheImplTest {
                 }
             }
         }
-        val cache = SimplePageCacheImpl(storage)
+        val cache = createCache(storage)
         val cost1 = storage.totalAccessCost
         val coldPages = (1 .. 10).map { idx -> cache.getAndPin(idx) }.toList()
         val cost2 = storage.totalAccessCost
@@ -78,7 +80,7 @@ class PageCacheImplTest {
     @Test
     fun `pages are evicted when cache is full`() {
         val storage = createHardDriveEmulatorStorage()
-        val cache = SimplePageCacheImpl(storage, maxCacheSize = 5)
+        val cache = createCache(storage, maxCacheSize = 5)
         cache.load(1, 5)
         val cost1 = storage.totalAccessCost
 
@@ -97,7 +99,7 @@ class PageCacheImplTest {
     @Test
     fun `subcache pages eviction priority`() {
         val storage = createHardDriveEmulatorStorage()
-        val cache = SimplePageCacheImpl(storage, maxCacheSize = 10)
+        val cache = createCache(storage, maxCacheSize = 10)
         cache.load(1, 5)
         val subcache = cache.createSubCache(5)
         subcache.load(6, 5)
@@ -116,4 +118,12 @@ class PageCacheImplTest {
         assertEquals(1, cache.stats.cacheMiss)
         assertEquals(7, cache.stats.cacheHit)
     }
+
+    @Test
+    fun `test take drop`() {
+        (1..10).toList().let {
+            assertEquals(it, it.take(4) + it.drop(4))
+        }
+    }
+
 }
