@@ -81,6 +81,11 @@ interface PageCache {
      * Returns this cache hit/miss statistics.
      */
     val stats: PageCacheStats
+
+    /**
+     * Returns the capacity (maximum size) of this cache in pages
+     */
+    val capacity: Int
 }
 
 interface PageCacheStats {

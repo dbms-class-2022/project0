@@ -60,6 +60,8 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
     internal val cacheArray = mutableListOf<CachedPageImpl>()
     internal val cache get() = cacheArray.associateBy { it.id }
 
+    override val capacity = maxCacheSize
+
     override fun load(startPageId: PageId, pageCount: Int) = doLoad(startPageId, pageCount, this::doAddPage)
 
 
@@ -143,6 +145,9 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
     private val statsImpl = StatsImpl()
     override val stats: PageCacheStats get() = statsImpl
     private val subcachePages = mutableSetOf<PageId>()
+
+    override val capacity = maxCacheSize
+
     override fun load(startPageId: PageId, pageCount: Int) {
         mainCache.doLoad(startPageId, pageCount, this::doAddPage)
     }
