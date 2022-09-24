@@ -69,5 +69,7 @@ interface AccessMethodManager {
      */
     @Throws(AccessMethodException::class)
     fun addPage(tableOid: Oid, pageCount: Int = 1): PageId
+
+    fun pageCount(tableName: String): Int
 }
 

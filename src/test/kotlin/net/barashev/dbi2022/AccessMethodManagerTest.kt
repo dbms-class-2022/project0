@@ -115,4 +115,17 @@ class AccessMethodManagerTest {
         assertEquals(10, catalog.createFullScan("table1") {}.pages().count())
     }
 
+    @Test
+    fun `page count`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 20)
+        val catalog = SimpleAccessMethodManager(cache)
+        val tableOid = catalog.createTable("table1")
+
+        assertEquals(0, catalog.pageCount("table1"))
+        catalog.addPage(tableOid)
+        assertEquals(1, catalog.pageCount("table1"))
+        catalog.addPage(tableOid, 10)
+        assertEquals(11, catalog.pageCount("table1"))
+    }
 }
