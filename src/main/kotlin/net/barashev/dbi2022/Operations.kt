@@ -15,7 +15,6 @@
  */
 package net.barashev.dbi2022
 
-import java.lang.Comparable
 import java.util.function.Function
 
 /**
@@ -31,7 +30,7 @@ interface MultiwayMergeSort : AutoCloseable {
      * @returns the name of the output table. The output table is owned by the client, and it is client's responsibility
      *          to delete the output table when it is not needed anymore.
      */
-    fun <T> sort(tableName: String, comparableValue: Function<ByteArray, Comparable<in T>>): String
+    fun <T: Comparable<T>> sort(tableName: String, comparableValue: Function<ByteArray, T>): String
 
     /**
      * Releases all the temporary resources, such as intermediate tables, except for the output table.
@@ -65,7 +64,7 @@ object Operations {
      */
     var sortFactory: (AccessMethodManager, PageCache) -> MultiwayMergeSort = { _, _  ->
         object : MultiwayMergeSort {
-            override fun <T> sort(tableName: String, comparableValue: Function<ByteArray, Comparable<in T>>): String {
+            override fun <T: Comparable<T>> sort(tableName: String, comparableValue: Function<ByteArray, T>): String {
                 TODO("Not yet implemented")
             }
         }
