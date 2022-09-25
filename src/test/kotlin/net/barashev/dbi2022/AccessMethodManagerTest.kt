@@ -109,10 +109,14 @@ class AccessMethodManagerTest {
         val tableOid = catalog.createTable("table1")
         (1..10).forEach {
             cache.getAndPin(catalog.addPage(tableOid)).use { dataPage ->
-                dataPage.putRecord(Record2(intField(42), stringField("Hello world")).asBytes())
+                dataPage.putRecord(Record2(intField(it), stringField("Hello world")).asBytes())
             }
         }
         assertEquals(10, catalog.createFullScan("table1") {}.pages().count())
+        assertEquals((1..10).toList(),
+            catalog.createFullScan("table1") {
+                Record2(intField(), stringField()).fromBytes(it)
+            }.map { it.value1 }.toList() )
     }
 
     @Test
