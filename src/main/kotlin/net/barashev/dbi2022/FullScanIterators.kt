@@ -83,7 +83,7 @@ internal class RootRecordIteratorImpl(
         return if (currentRootPageId >= startRootPageId + maxRootPageCount) {
             null
         } else {
-            pageCache.getAndPin(currentRootPageId)
+            pageCache.get(currentRootPageId)
         }
     }
 }

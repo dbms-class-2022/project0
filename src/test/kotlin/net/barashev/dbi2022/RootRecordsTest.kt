@@ -46,7 +46,7 @@ class RootRecordsTest {
     @Test
     fun `iterate over several pages`() {
         val storage = createHardDriveEmulatorStorage()
-        val cache = SimplePageCacheImpl(storage, 20)
+        val cache = SimplePageCacheImpl(storage, 3)
         cache.getAndPin(0).use {buf ->
             buf.putRecord(OidPageidRecord(intField(1), intField(1000)).asBytes())
             buf.putRecord(OidPageidRecord(intField(1), intField(1001)).asBytes())
@@ -59,8 +59,13 @@ class RootRecordsTest {
             buf.putRecord(OidPageidRecord(intField(2), intField(2001)).asBytes())
             buf.putRecord(OidPageidRecord(intField(3), intField(3000)).asBytes())
         }
+        cache.getAndPin(3).use { buf ->
+            buf.putRecord(OidPageidRecord(intField(4), intField(4000)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(4), intField(4001)).asBytes())
+        }
 
-        assertEquals(listOf(1000, 1001, 2000, 1002, 2001, 3000), RootRecords(cache, 0, 3).map { it.value2 }.toList())
+        assertEquals(listOf(1000, 1001, 2000, 1002, 2001, 3000, 4000, 4001), RootRecords(cache, 0, 4)
+            .map { it.value2 }.toList())
 
     }
 

@@ -91,4 +91,33 @@ class FullScanIteratorImplTest {
             }.map { it.value2 }.toList()
         )
     }
+
+    @Test
+    fun `full scan iterator will not pin pages`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 3)
+        cache.getAndPin(0).use {buf ->
+            // We create 4 pages in the NAME system table
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1000)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1001)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1002)).asBytes())
+            buf.putRecord(OidPageidRecord(intField(NAME_SYSTABLE_OID), intField(1003)).asBytes())
+        }
+        (1000..1003).forEach { pageId ->
+            cache.getAndPin(pageId).use {
+                val tableOid = pageId % 1000 + 1
+                it.putRecord(OidNameRecord(intField(tableOid), stringField("table$tableOid")).asBytes())
+            }
+        }
+
+        // We have a cache of size 3, so we expect that while iterating, we will not pin any pages and will not
+        // get IllegalStateException
+        val rootRecords = RootRecords(cache, 0, 1)
+        assertEquals(
+            listOf("table1", "table2", "table3", "table4"),
+            FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
+                OidNameRecord(intField(), stringField()).fromBytes(it)
+            }.map { it.value2 }.toList()
+        )
+    }
 }
