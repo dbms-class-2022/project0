@@ -57,6 +57,34 @@ interface Hashtable : AutoCloseable {
     override fun close() {}
 }
 
+enum class JoinAlgorithm {
+    NESTED_LOOPS, HASH, MERGE
+}
+
+/**
+ * Join operation operand. The algorithm will read records from the specified tables and will parse them using
+ * joinAttribute function which is supposed to return a value of a join attribute for each record.
+ */
+data class JoinOperand<T>(val tableName: String, val joinAttribute: Function<ByteArray, T>)
+
+interface JoinOutput: Iterator<Pair<ByteArray, ByteArray>>, AutoCloseable
+/**
+ * Objects implementing this interface can join tables.
+ * This interface it closeable, and it is the responsibility of this object client to call close() on it or
+ * on the returned iterator when the work is done.
+ */
+interface InnerJoin : AutoCloseable {
+
+    /**
+     * Performs an inner join of the given tables and writes the matching records to the output consumer.
+     * In pairs passed to the output consumer
+     * @return iterator over the join output. The first component of returned pairs comes from the "left" operand and second component
+     * comes from the "right" operand. Calling close() on the iterator closes the join operation, and vice versa
+     */
+    fun <T: Comparable<T>> join(leftTable: JoinOperand<T>, rightTable: JoinOperand<T>): JoinOutput
+
+    override fun close() {}
+}
 
 object Operations {
     /**
@@ -76,6 +104,17 @@ object Operations {
     var hashFactory: (AccessMethodManager, PageCache) -> Hashtable = { _, _ ->
         object : Hashtable {
             override fun <T> hash(tableName: String, bucketCount: Int, hashKey: Function<ByteArray, T>): List<Bucket> {
+                TODO("Not yet implemented")
+            }
+        }
+    }
+
+    /**
+     * Creates an instance of an inner join
+     */
+    var innerJoinFactory: (AccessMethodManager, PageCache, JoinAlgorithm) -> InnerJoin = { _, _, _ ->
+        object : InnerJoin {
+            override fun <T : Comparable<T>> join(leftTable: JoinOperand<T>, rightTable: JoinOperand<T>): JoinOutput {
                 TODO("Not yet implemented")
             }
         }
