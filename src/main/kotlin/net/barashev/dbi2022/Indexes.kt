@@ -31,16 +31,16 @@ enum class IndexMethod {
  *
  * It is assumed that each index key has at most one matching PageId (which essentially means that it is a unique index)
  */
-interface Index<T> {
+interface Index<T: Comparable<T>> {
     /**
      * Searches for the specified index key and returns an identifier of a table page where a record with such
      * value of the indexed attribute can be found.
      */
-    fun <T> lookup(indexKey: T): PageId?
+    fun lookup(indexKey: T): PageId?
 }
 
-private class StubIndex<T>: Index<T> {
-    override fun <T> lookup(indexKey: T): PageId? {
+private class StubIndex<T: Comparable<T>>: Index<T> {
+    override fun lookup(indexKey: T): PageId? {
         return null
     }
 }
@@ -62,7 +62,7 @@ interface IndexFactory {
      *
      * Calling this method will create (and possible destroy previous) disk pages, so it shall be used with care.
      */
-    fun <T, S: AttributeType<T>> build(tableName: String, indexTableName: String, method: IndexMethod = IndexMethod.BTREE, keyType: S, indexKey: Function<ByteArray, T>): Index<T>
+    fun <T: Comparable<T>, S: AttributeType<T>> build(tableName: String, indexTableName: String, method: IndexMethod = IndexMethod.BTREE, keyType: S, indexKey: Function<ByteArray, T>): Index<T>
 
 
     /**
@@ -74,11 +74,11 @@ interface IndexFactory {
      * @throws IndexException if there is no indexTableName table or if its pages are not a valid index of the specified index method.
      */
     @Throws(IndexException::class)
-    fun <T, S: AttributeType<T>> open(tableName: String, indexTableName: String, method: IndexMethod = IndexMethod.BTREE, keyType: S, indexKey: Function<ByteArray, T>): Index<T>
+    fun <T: Comparable<T>, S: AttributeType<T>> open(tableName: String, indexTableName: String, method: IndexMethod = IndexMethod.BTREE, keyType: S, indexKey: Function<ByteArray, T>): Index<T>
 }
 
 private class StubIndexFactory: IndexFactory {
-    override fun <T, S : AttributeType<T>> build(
+    override fun <T: Comparable<T>, S : AttributeType<T>> build(
         tableName: String,
         indexTableName: String,
         method: IndexMethod,
@@ -86,7 +86,7 @@ private class StubIndexFactory: IndexFactory {
         indexKey: Function<ByteArray, T>
     ): Index<T> = StubIndex()
 
-    override fun <T, S : AttributeType<T>> open(
+    override fun <T: Comparable<T>, S : AttributeType<T>> open(
         tableName: String,
         indexTableName: String,
         method: IndexMethod,
