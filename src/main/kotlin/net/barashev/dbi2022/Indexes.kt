@@ -78,7 +78,7 @@ interface IndexFactory {
 }
 
 private class StubIndexFactory: IndexFactory {
-    override fun <T: Comparable<T>, S : AttributeType<T>> build(
+    override fun <T : Comparable<T>, S : AttributeType<T>> build(
         tableName: String,
         indexTableName: String,
         method: IndexMethod,
