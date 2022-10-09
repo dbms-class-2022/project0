@@ -33,6 +33,8 @@ sealed class AttributeType<T>(val byteSize: Int = -1) {
     abstract fun asBytes(value: T): ByteArray
 
     abstract fun fromBytes(bytes: ByteArray): Pair<T, Int>
+
+    abstract fun defaultValue(): T
 }
 
 class IntAttribute: AttributeType<Int>(Int.SIZE_BYTES) {
@@ -41,6 +43,8 @@ class IntAttribute: AttributeType<Int>(Int.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).int to Int.SIZE_BYTES
+    override fun defaultValue(): Int  = 0
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -61,6 +65,9 @@ class LongAttribute: AttributeType<Long>(Long.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long to Long.SIZE_BYTES
+
+    override fun defaultValue(): Long = 0L
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -90,6 +97,8 @@ class StringAttribute: AttributeType<String>() {
         return ByteBuffer.wrap(bytes, Int.SIZE_BYTES, length).asCharBuffer().toString() to Int.SIZE_BYTES + length
     }
 
+    override fun defaultValue(): String = ""
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -110,6 +119,9 @@ class BooleanAttribute: AttributeType<Boolean>(Byte.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = (ByteBuffer.wrap(bytes).get().toInt() == 1) to Byte.SIZE_BYTES
+
+    override fun defaultValue(): Boolean = false
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -130,6 +142,9 @@ class DoubleAttribute: AttributeType<Double>(Double.SIZE_BYTES) {
     }.array()
 
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).double to Double.SIZE_BYTES
+
+    override fun defaultValue(): Double = 0.0
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -152,6 +167,8 @@ class DateAttribute: AttributeType<Date>(Long.SIZE_BYTES) {
     override fun fromBytes(bytes: ByteArray) = ByteBuffer.wrap(bytes).long.let {
         Date.from(Instant.ofEpochMilli(it))
     } to Long.SIZE_BYTES
+
+    override fun defaultValue(): Date = Date.from(Instant.EPOCH)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
