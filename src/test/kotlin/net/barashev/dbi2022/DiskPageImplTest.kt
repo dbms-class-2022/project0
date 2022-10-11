@@ -158,4 +158,29 @@ class DiskPageImplTest {
             }
         }
     }
+
+    @Test
+    fun `delete and put first record`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 1)
+        val accessManager = SimpleAccessMethodManager(cache)
+
+        val tableName = "exampleTable"
+
+        val tableOid = accessManager.createTable(tableName)
+        val pageId1 = accessManager.addPage(tableOid)
+
+        cache.getAndPin(pageId1).use {
+            it.putRecord(Record1(intField(1)).asBytes())
+            it.deleteRecord(0)
+        }
+
+        // evict page 1, needed to re-initialize disk page fielsd again
+        cache.getAndPin(accessManager.addPage(tableOid)).use {}
+
+        cache.getAndPin(pageId1).use {
+            val res = it.putRecord(Record1(intField(2)).asBytes(), 0)
+            assertTrue(res.isOk)
+        }
+    }
 }

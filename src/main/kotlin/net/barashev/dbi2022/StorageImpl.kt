@@ -52,7 +52,7 @@ private class DiskPageImpl(
 
     init {
         directorySize = this.bytes.getDirectorySize()
-        lastRecordOffset = if (directorySize > 0) this.bytes.getDirectoryEntry(directorySize - 1) else pageSize
+        lastRecordOffset = if (directorySize > 0) this.bytes.getDirectoryEntry(directorySize - 1).absoluteValue else pageSize
     }
     override fun putRecord(recordData: ByteArray, recordId_: RecordId): PutRecordResult {
         val recordId = if (recordId_ == -1) directorySize else recordId_
