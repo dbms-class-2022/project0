@@ -72,6 +72,8 @@ interface DiskPage {
 
     // Returns all records. Records which are logically deleted are returned as well.
     fun allRecords(): Map<RecordId, GetRecordResult>
+
+    fun clear()
 }
 
 /**

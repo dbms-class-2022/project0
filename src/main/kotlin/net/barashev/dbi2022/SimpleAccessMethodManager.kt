@@ -18,7 +18,6 @@ package net.barashev.dbi2022
 
 import java.lang.IllegalArgumentException
 import java.util.function.Function
-import kotlin.math.max
 
 private const val ATTRIBUTE_SYSTABLE_OID = 1
 
@@ -28,6 +27,7 @@ const val NAME_SYSTABLE_OID = 0
 internal interface TablePageDirectory {
     fun pages(tableOid: Oid): Iterable<OidPageidRecord>
     fun add(tableOid: Oid, pageCount: Int = 1): PageId
+    fun delete(tableOid: Oid)
 }
 
 /**
@@ -54,6 +54,12 @@ class SimplePageDirectoryImpl(private val pageCache: PageCache): TablePageDirect
             nextPageId
         }
     }
+
+    override fun delete(tableOid: Oid) {
+        pageCache.getAndPin(tableOid).use {
+            it.clear()
+        }
+    }
 }
 
 /**
@@ -78,6 +84,11 @@ internal class TableOidMapping(
         }
         return if (oid == -1) null else oid
     }
+
+    internal fun isValid(oid: Oid): Boolean =
+        createAccess().firstOrNull {
+            it.value1 == oid
+        } != null
 
     fun create(tableName: String): Oid {
         val nextOid = nextTableOid()
@@ -109,6 +120,21 @@ internal class TableOidMapping(
         return maxOid + 1
     }
 
+    fun delete(tableName: String) {
+        FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, {tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()}) {
+            OidNameRecord(intField(), stringField()).fromBytes(it)
+        }.pages().forEach {page ->
+            page.allRecords().entries.find {
+                if (it.value.isOk) {
+                    OidNameRecord(intField(), stringField()).fromBytes(it.value.bytes).component2() == tableName
+                } else false
+            }?.let {
+                page.deleteRecord(it.key)
+            }
+        }
+        cachedMapping.remove(tableName)
+    }
+
 }
 
 
@@ -131,7 +157,12 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
         return tableOidMapping.create(tableName)
     }
 
-    override fun addPage(tableOid: Oid, pageCount: Int): PageId = tablePageDirectory.add(tableOid, pageCount)
+    override fun addPage(tableOid: Oid, pageCount: Int): PageId =
+        if (tableOidMapping.isValid(tableOid)) {
+            tablePageDirectory.add(tableOid, pageCount)
+        } else {
+            throw AccessMethodException("Table with oid $tableOid not found")
+        }
 
     override fun pageCount(tableName: String): Int =
         tableOidMapping.get(tableName)?.let {
@@ -139,4 +170,13 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
         } ?: throw AccessMethodException("Relation $tableName not found")
 
     override fun tableExists(tableName: String): Boolean = tableOidMapping.get(tableName) != null
+
+    override fun deleteTable(tableName: String) {
+        // This implementation just removes table records from the table page directory and from the name=>oid
+        // mapping. It won't clear or garbage-collect table pages.
+        tableOidMapping.get(tableName)?.let {
+            tablePageDirectory.delete(it)
+            tableOidMapping.delete(tableName)
+        }
+    }
 }

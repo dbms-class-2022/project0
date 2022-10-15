@@ -80,5 +80,10 @@ interface AccessMethodManager {
      * @return true if a table with the given name exists, false otherwise
      */
     fun tableExists(tableName: String): Boolean
+
+    /**
+     * Deletes table with the given name.
+     */
+    fun deleteTable(tableName: String)
 }
 

@@ -90,6 +90,12 @@ private class DiskPageImpl(
         }
     }
 
+    override fun clear() {
+        (0 until pageSize).forEach { bytes[it] = 0 }
+        directorySize = 0
+        lastRecordOffset = pageSize
+    }
+
     override fun getRecord(recordId: RecordId): GetRecordResult =
         if (recordId < 0 || recordId >= directorySize) {
             GetRecordResult(EMPTY_BYTE_ARRAY, isDeleted = false, isOutOfRange = true)

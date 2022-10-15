@@ -19,7 +19,9 @@ package net.barashev.dbi2022
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class AccessMethodManagerTest {
     @Test
@@ -131,5 +133,22 @@ class AccessMethodManagerTest {
         assertEquals(1, catalog.pageCount("table1"))
         catalog.addPage(tableOid, 10)
         assertEquals(11, catalog.pageCount("table1"))
+    }
+
+    @Test
+    fun `delete table`() {
+        val storage = createHardDriveEmulatorStorage()
+        val cache = SimplePageCacheImpl(storage, 20)
+        val catalog = SimpleAccessMethodManager(cache)
+        val tableOid = catalog.createTable("table1")
+
+        assertTrue(catalog.tableExists("table1"))
+        catalog.addPage(tableOid)
+        assertEquals(1, catalog.pageCount("table1"))
+
+        catalog.deleteTable("table1")
+        assertFalse(catalog.tableExists("table1"))
+        assertThrows<AccessMethodException> {  catalog.pageCount("table1") }
+        assertThrows<AccessMethodException> {  catalog.addPage(tableOid) }
     }
 }
