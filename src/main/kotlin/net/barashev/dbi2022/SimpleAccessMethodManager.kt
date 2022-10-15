@@ -138,4 +138,5 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
             tablePageDirectory.pages(it).count()
         } ?: throw AccessMethodException("Relation $tableName not found")
 
+    override fun tableExists(tableName: String): Boolean = tableOidMapping.get(tableName) != null
 }

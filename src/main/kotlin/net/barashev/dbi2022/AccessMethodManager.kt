@@ -70,6 +70,15 @@ interface AccessMethodManager {
     @Throws(AccessMethodException::class)
     fun addPage(tableOid: Oid, pageCount: Int = 1): PageId
 
+    /**
+     * @return the number of pages in the given table, if it exists
+     * @throws AccessMethodException if table with the given name does not exist
+     */
     fun pageCount(tableName: String): Int
+
+    /**
+     * @return true if a table with the given name exists, false otherwise
+     */
+    fun tableExists(tableName: String): Boolean
 }
 
