@@ -257,7 +257,8 @@ class Record2<T1: Any, T2: Any>(
         return "Record2(type1=$type1, value1=$value1, type2=$type2, value2=$value2)"
     }
 
-
+    operator fun component1() = value1
+    operator fun component2() = value2
 }
 
 class Record3<T1: Any, T2: Any, T3: Any>(
@@ -311,7 +312,10 @@ class Record3<T1: Any, T2: Any, T3: Any>(
         return "Record3(type1=$type1, value1=$value1, type2=$type2, value2=$value2, type3=$type3, value3=$value3)"
     }
 
+    operator fun component1() = value1
+    operator fun component2() = value2
 
+    operator fun component3() = value3
 }
 
 fun <T> ByteBuffer.readAttribute(attrType: AttributeType<T>): T {

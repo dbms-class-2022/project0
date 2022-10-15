@@ -21,6 +21,8 @@ import net.barashev.dbi2022.Record3
 import net.barashev.dbi2022.intField
 import net.barashev.dbi2022.stringField
 import org.junit.jupiter.api.Test
+import java.time.Instant
+import java.util.*
 import kotlin.test.assertEquals
 
 class RecordsTest {
@@ -57,6 +59,14 @@ class RecordsTest {
             assertEquals(42, it.value2)
             assertEquals("Hello World!", it.value3)
         }
+    }
+
+    @Test
+    fun `record destructuring`() {
+        val (c1, c2, c3) = Record3(intField(42), stringField("The question"), dateField(Date.from(Instant.EPOCH)))
+        assertEquals(42, c1)
+        assertEquals("The question", c2)
+        assertEquals(Date.from(Instant.EPOCH), c3)
     }
 
 }
