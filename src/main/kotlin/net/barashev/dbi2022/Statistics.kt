@@ -43,7 +43,7 @@ object Statistics {
 }
 
 
-private class FakeStatisticsManager: StatisticsManager {
+class FakeStatisticsManager: StatisticsManager {
     override fun <T : Comparable<T>> buildStatistics(
         tableName: String,
         attributeName: String,

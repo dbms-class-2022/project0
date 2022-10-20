@@ -92,3 +92,9 @@ interface PageCacheStats {
     val cacheHit: Int
     val cacheMiss: Int
 }
+
+object CacheManager {
+    var factory: (Storage, Int) -> PageCache = { storage, size ->
+        SimplePageCacheImpl(storage, size)
+    }
+}
