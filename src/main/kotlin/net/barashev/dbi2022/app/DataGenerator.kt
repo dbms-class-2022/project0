@@ -10,9 +10,9 @@ class DataGenerator(
     val scale: Int = 1,
     fixedRowCount: Boolean
 ) {
-    val planetCount = if (fixedRowCount) 20 else Random.nextInt(10, 100 * scale/5)
-    val spacecraftCount = if (fixedRowCount) 4 else Random.nextInt(10, 20) * scale/5
-    val flightCount = if (fixedRowCount) 500 else Random.nextInt(500, 1000) * scale
+    val planetCount = (if (fixedRowCount) 100 else Random.nextInt(10, 100)) * scale/5
+    val spacecraftCount = (if (fixedRowCount) 20 else Random.nextInt(10, 20)) * scale/5
+    val flightCount = (if (fixedRowCount) 200 else Random.nextInt(500, 1000)) * scale
     val ticketCount = flightCount * 3
     val faker = Faker()
 
