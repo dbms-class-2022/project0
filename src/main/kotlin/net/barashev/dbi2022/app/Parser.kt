@@ -73,3 +73,13 @@ fun parseFilterClause(filterClause: String): List<FilterSpec> =
                 }
             )
         }.toList()
+
+data class IndexSpec(val tableName: String, val attributeName: String)
+fun parseIndexClause(indexClause: String): List<IndexSpec> =
+    if (indexClause.isBlank()) emptyList()
+    else
+        indexClause.split(",").map { indexSpec ->
+            val (table, attribute) = indexSpec.trim().split(".", limit = 2)
+            IndexSpec(table, attribute)
+        }.toList()
+
