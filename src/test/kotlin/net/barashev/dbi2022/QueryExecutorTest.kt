@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 class QueryExecutorTest {
     fun generateData(accessMethodManager: AccessMethodManager, cache: PageCache) {
-        DataGenerator(accessMethodManager, cache, 1, true)
+        DataGenerator(accessMethodManager, cache, 1, true, true)
     }
 
     @Test

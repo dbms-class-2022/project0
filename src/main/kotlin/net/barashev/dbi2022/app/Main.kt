@@ -15,10 +15,12 @@ class DBI2022: CliktCommand() {
     val fixedRowCount by option(help="Shall the generated data amount be random").flag(default = false)
     val joinClause: String by option(help="JOIN clause, e.g. 'planet.id:flight.planet_id'").default("")
     val filterClause: String by option(help="Filter clause, e.g. 'planet.id = 1'").default("")
+    val disableStatistics by option(help="Disable collection of attribute statistics [default=false]").flag(default = false)
+
     override fun run() {
         val storage = createHardDriveEmulatorStorage()
         val (cache, accessMethodManager) = initializeFactories(storage, cacheSize)
-        DataGenerator(accessMethodManager, cache, dataScale, fixedRowCount)
+        DataGenerator(accessMethodManager, cache, dataScale, fixedRowCount, disableStatistics)
 
         val innerJoins = parseJoinClause(joinClause)
         val filters = parseFilterClause(filterClause)

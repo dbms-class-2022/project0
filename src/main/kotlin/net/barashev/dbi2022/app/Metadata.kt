@@ -1,23 +1,28 @@
 package net.barashev.dbi2022.app
 
+import net.barashev.dbi2022.*
 import java.util.function.Function
 
-import net.barashev.dbi2022.Record3
-import net.barashev.dbi2022.doubleField
-import net.barashev.dbi2022.intField
-import net.barashev.dbi2022.stringField
-
 typealias PlanetRecord = Record3<Int, String, Double>
-fun planetRecord(bytes: ByteArray): PlanetRecord = PlanetRecord(intField(), stringField(), doubleField()).fromBytes(bytes)
+
+fun planetRecord(bytes: ByteArray? = null): PlanetRecord = PlanetRecord(intField(), stringField(), doubleField()).let {rec ->
+    bytes?.let{ rec.fromBytes(it) } ?: rec
+}
 
 typealias SpacecraftRecord = Record3<Int, String, Int>
-fun spacecraftRecord(bytes: ByteArray) = SpacecraftRecord(intField(), stringField(), intField()).fromBytes(bytes)
+fun spacecraftRecord(bytes: ByteArray? = null) = SpacecraftRecord(intField(), stringField(), intField()).let {rec ->
+    bytes?.let{ rec.fromBytes(it) } ?: rec
+}
 
 typealias FlightRecord = Record3<Int, Int, Int>
-fun flightRecord(bytes: ByteArray) = FlightRecord(intField(), intField(), intField()).fromBytes(bytes)
+fun flightRecord(bytes: ByteArray? = null) = FlightRecord(intField(), intField(), intField()).let {rec ->
+    bytes?.let{ rec.fromBytes(it) } ?: rec
+}
 
 typealias TicketRecord = Record3<Int, String, Double>
-fun ticketRecord(bytes: ByteArray) = TicketRecord(intField(), stringField(), doubleField()).fromBytes(bytes)
+fun ticketRecord(bytes: ByteArray? = null) = TicketRecord(intField(), stringField(), doubleField()).let {rec ->
+    bytes?.let{ rec.fromBytes(it) } ?: rec
+}
 
 val tableRecordParsers = mapOf<String, TableRecordParser>(
     "planet" to { planetRecord(it) as Record3<Any, Any, Any> },
@@ -39,4 +44,19 @@ val attributeValueParsers = mapOf<String, Function<ByteArray, Comparable<Any>>>(
     "ticket.flight_num" to Function { ticketRecord(it).value1 as Comparable<Any>},
     "ticket.pax_name" to Function { ticketRecord(it).value2 as Comparable<Any>},
     "ticket.price" to Function { ticketRecord(it).value3 as Comparable<Any>},
+)
+
+val attributeTypes = mapOf(
+    "planet.id" to planetRecord().type1,
+    "planet.name" to planetRecord().type2,
+    "planet.distance" to planetRecord().type3,
+    "spacecraft.id" to spacecraftRecord().type1 ,
+    "spacecraft.name" to spacecraftRecord().type2,
+    "spacecraft.capacity" to spacecraftRecord().type3,
+    "flight.num" to flightRecord().type1,
+    "flight.planet_id" to flightRecord().type2,
+    "flight.spacecraft_id" to flightRecord().type3,
+    "ticket.flight_num" to ticketRecord().type1,
+    "ticket.pax_name" to ticketRecord().type2,
+    "ticket.price" to ticketRecord().type3,
 )

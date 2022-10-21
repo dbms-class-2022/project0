@@ -8,7 +8,8 @@ class DataGenerator(
     val accessMethodManager: AccessMethodManager,
     val cache: PageCache,
     val scale: Int = 1,
-    fixedRowCount: Boolean
+    fixedRowCount: Boolean,
+    disableStatistics: Boolean
 ) {
     val planetCount = (if (fixedRowCount) 100 else Random.nextInt(10, 100)) * scale/5
     val spacecraftCount = (if (fixedRowCount) 20 else Random.nextInt(10, 20)) * scale/5
@@ -21,6 +22,10 @@ class DataGenerator(
         populateSpacecrafts(spacecraftCount)
         populateFlights(flightCount, planetCount, spacecraftCount)
         populateTickets(ticketCount, flightCount)
+
+        if (!disableStatistics) {
+            generateStatistics()
+        }
     }
 }
 
@@ -33,12 +38,6 @@ private fun DataGenerator.populatePlanets(planetCount: Int) {
             }
         }
     }
-    Statistics.managerFactory(accessMethodManager, cache).buildStatistics(
-        "planet",
-        "distance",
-        doubleField().first,
-        10
-    ) { planetRecord(it).component3() }
 }
 
 private fun DataGenerator.populateSpacecrafts(spacecraftCount: Int) {
@@ -74,3 +73,79 @@ private fun DataGenerator.populateTickets(ticketCount: Int, flightCount: Int) {
     }
 }
 
+private fun DataGenerator.generateStatistics() {
+    Statistics.managerFactory(accessMethodManager, cache).apply {
+        buildStatistics(
+            "planet",
+            "id",
+            intField().first,
+            10
+        ) { planetRecord(it).component1() }
+        buildStatistics(
+            "planet",
+            "name",
+            stringField().first,
+            10
+        ) { planetRecord(it).component2() }
+        buildStatistics(
+            "planet",
+            "distance",
+            doubleField().first,
+            10
+        ) { planetRecord(it).component3() }
+        buildStatistics(
+            "spacecraft",
+            "id",
+            intField().first,
+            10
+        ) { spacecraftRecord(it).component1() }
+        buildStatistics(
+            "spacecraft",
+            "name",
+            stringField().first,
+            10
+        ) { spacecraftRecord(it).component2() }
+        buildStatistics(
+            "spacecraft",
+            "capacity",
+            intField().first,
+            10
+        ) { spacecraftRecord(it).component3() }
+        buildStatistics(
+            "flight",
+            "num",
+            intField().first,
+            10
+        ) { flightRecord(it).component1() }
+        buildStatistics(
+            "flight",
+            "planet_id",
+            intField().first,
+            10
+        ) { flightRecord(it).component2() }
+        buildStatistics(
+            "flight",
+            "spacecraft_id",
+            intField().first,
+            10
+        ) { flightRecord(it).component3() }
+        buildStatistics(
+            "ticket",
+            "flight_num",
+            intField().first,
+            10
+        ) { ticketRecord(it).component1() }
+        buildStatistics(
+            "ticket",
+            "pax_name",
+            stringField().first,
+            10
+        ) { ticketRecord(it).component2() }
+        buildStatistics(
+            "ticket",
+            "price",
+            doubleField().first,
+            10
+        ) { ticketRecord(it).component3() }
+    }
+}
