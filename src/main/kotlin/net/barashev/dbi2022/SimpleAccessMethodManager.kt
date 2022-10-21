@@ -169,18 +169,18 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
         recordBytesParser: Function<ByteArray, T>
     ): IndexScan<T, K>? =
         when {
-            tableExists("${tableName}_${attributeName}_idx_btree") ->
+            tableExists(tableName.indexTableName(attributeName, IndexMethod.BTREE)) ->
                 IndexManager.indexFactory.open(
                     tableName,
-                    "${tableName}_${attributeName}_idx_btree",
+                    tableName.indexTableName(attributeName, IndexMethod.BTREE),
                     IndexMethod.BTREE,
                     attributeType,
                     keyParser
                 )
-            tableExists("${tableName}_${attributeName}_idx_hash") ->
+            tableExists(tableName.indexTableName(attributeName, IndexMethod.HASH)) ->
                 IndexManager.indexFactory.open(
                     tableName,
-                    "${tableName}_${attributeName}_idx_hash",
+                    tableName.indexTableName(attributeName, IndexMethod.HASH),
                     IndexMethod.HASH,
                     attributeType,
                     keyParser
@@ -219,6 +219,9 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
             Result.failure(ex)
         }
     }
+
+    override fun indexExists(tableName: String, attributeName: String): Boolean =
+        tableExists(tableName.indexTableName(attributeName, IndexMethod.BTREE)) || tableExists(tableName.indexTableName(attributeName, IndexMethod.HASH))
 
     override fun createTable(tableName: String, vararg columns: Triple<String, AttributeType<Any>, ColumnConstraint?>): Oid {
         if (tableOidMapping.get(tableName) != null) {

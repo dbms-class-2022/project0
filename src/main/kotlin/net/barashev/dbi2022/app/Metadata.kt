@@ -47,16 +47,16 @@ val attributeValueParsers = mapOf<String, Function<ByteArray, Comparable<Any>>>(
 )
 
 val attributeTypes = mapOf(
-    "planet.id" to planetRecord().type1,
-    "planet.name" to planetRecord().type2,
-    "planet.distance" to planetRecord().type3,
-    "spacecraft.id" to spacecraftRecord().type1 ,
-    "spacecraft.name" to spacecraftRecord().type2,
-    "spacecraft.capacity" to spacecraftRecord().type3,
-    "flight.num" to flightRecord().type1,
-    "flight.planet_id" to flightRecord().type2,
-    "flight.spacecraft_id" to flightRecord().type3,
-    "ticket.flight_num" to ticketRecord().type1,
-    "ticket.pax_name" to ticketRecord().type2,
-    "ticket.price" to ticketRecord().type3,
+    "planet.id" to planetRecord().f1.first as AttributeType<Comparable<Any>>,
+    "planet.name" to planetRecord().f2.first as AttributeType<Comparable<Any>>,
+    "planet.distance" to planetRecord().f3.first as AttributeType<Comparable<Any>>,
+    "spacecraft.id" to spacecraftRecord().f1.first as AttributeType<Comparable<Any>>,
+    "spacecraft.name" to spacecraftRecord().f2.first as AttributeType<Comparable<Any>>,
+    "spacecraft.capacity" to spacecraftRecord().f3.first as AttributeType<Comparable<Any>>,
+    "flight.num" to flightRecord().f1.first as AttributeType<Comparable<Any>>,
+    "flight.planet_id" to flightRecord().f2.first as AttributeType<Comparable<Any>>,
+    "flight.spacecraft_id" to flightRecord().f3.first as AttributeType<Comparable<Any>>,
+    "ticket.flight_num" to ticketRecord().f1.first as AttributeType<Comparable<Any>>,
+    "ticket.pax_name" to ticketRecord().f2.first as AttributeType<Comparable<Any>>,
+    "ticket.price" to ticketRecord().f3.first as AttributeType<Comparable<Any>>,
 )

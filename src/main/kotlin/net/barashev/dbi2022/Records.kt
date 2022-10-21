@@ -274,9 +274,9 @@ class Record2<T1: Any, T2: Any>(
 }
 
 class Record3<T1: Any, T2: Any, T3: Any>(
-    f1: Pair<AttributeType<T1>, T1>,
-    f2: Pair<AttributeType<T2>, T2>,
-    f3: Pair<AttributeType<T3>, T3>) {
+    val f1: Pair<AttributeType<T1>, T1>,
+    val f2: Pair<AttributeType<T2>, T2>,
+    val f3: Pair<AttributeType<T3>, T3>) {
 
     val type1 = f1.first
     val value1 = f1.second

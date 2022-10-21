@@ -108,4 +108,36 @@ class QueryExecutorTest {
         }
         assertTrue(resultRowCount > 0)
     }
+
+    @Test
+    fun `filter using index`() {
+        val storage = createHardDriveEmulatorStorage()
+        val (cache, accessMethodManager) = initializeFactories(storage, 20)
+        generateData(accessMethodManager, cache)
+        accessMethodManager.createIndex("flight", "num", IntAttribute()) {
+            flightRecord(it).value1
+        }
+
+        val plan = QueryPlan(listOf(
+            JoinSpec("planet", "id") to JoinSpec("flight", "planet_id").also {
+                it.filterBy(FilterSpec("flight", "num", 2 as Comparable<Any>, EQ, useIndex = true))
+            },
+            JoinSpec("flight", "spacecraft_id") to JoinSpec("spacecraft", "id")
+        ), emptyList())
+
+        var resultRowCount = 0
+        val resultSpec = QueryExecutor(accessMethodManager, cache, tableRecordParsers, attributeValueParsers).execute(plan)
+        accessMethodManager.createFullScan(resultSpec.tableName) { bytes ->
+            parseJoinedRecord(bytes, resultSpec.realTables, tableRecordParsers)
+        }.forEach {
+            resultRowCount++
+            it.entries.forEach { (tableName, recordBytes) ->
+                when (tableName) {
+                    "flight" -> assertEquals<Any>(2, attributeValueParsers["flight.num"]!!.apply(recordBytes))
+                }
+            }
+        }
+        assertTrue(resultRowCount > 0)
+    }
+
 }

@@ -106,5 +106,7 @@ interface AccessMethodManager {
         attributeType: S,
         keyParser: Function<ByteArray, K>
     )
+
+    fun indexExists(tableName: String, attributeName: String): Boolean
 }
 

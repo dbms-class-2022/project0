@@ -80,16 +80,28 @@ class QueryExecutor(
         val outputTableName = "@${filter.attributeName},${joinSpec.tableName}"
         val outputTable = accessMethodManager.createTable(outputTableName)
         TableBuilder(accessMethodManager, pageCache, outputTable).use { builder ->
-            accessMethodManager.createFullScan(joinSpec.tableName) {
-                if (filter.op.test(valueParser.apply(it), filter.attributeValue)) {
-                    it
-                } else ByteArray(0)
-            }.forEach {
+            val filteredRecords: Iterable<ByteArray> = if (filter.useIndex) {
+                val attributeType = attributeTypes[filter.attribute] ?: throw QueryExecutorException("Unknown type of attribute ${filter.attribute}")
+                val attributeValueParser = attributeValueParsers[filter.attribute] ?: throw QueryExecutorException("Can't find parser for index key ${filter.attribute}")
+                accessMethodManager.createIndexScan(joinSpec.tableName, filter.attributeName, attributeType, attributeValueParser) {
+                    if (filter.op.test(valueParser.apply(it), filter.attributeValue)) {
+                        it
+                    } else ByteArray(0)
+                }?.byEquality(filter.attributeValue, attributeValueParser) ?: throw QueryExecutorException("Can't create index scan for ${filter.attribute}")
+            } else {
+                accessMethodManager.createFullScan(joinSpec.tableName) {
+                    if (filter.op.test(valueParser.apply(it), filter.attributeValue)) {
+                        it
+                    } else ByteArray(0)
+                }
+            }
+            filteredRecords.forEach {
                 if (it.isNotEmpty()) {
                     builder.insert(it)
                 }
             }
         }
+
         return JoinSpec(outputTableName, joinSpec.attributeName).also {
             //println("filter: output=$it")
         }

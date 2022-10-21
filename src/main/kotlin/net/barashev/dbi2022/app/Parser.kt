@@ -2,7 +2,9 @@ package net.barashev.dbi2022.app
 
 import java.util.function.BiPredicate
 
-data class FilterSpec(val tableName: String, val attributeName: String, val attributeValue: Comparable<Any>, val op: BiPredicate<Comparable<Any>, Comparable<Any>>) {
+data class FilterSpec(
+    val tableName: String, val attributeName: String, val attributeValue: Comparable<Any>,
+    val op: BiPredicate<Comparable<Any>, Comparable<Any>>, val useIndex: Boolean = false) {
     val attribute get() =
         if (attributeName.indexOf('.') >= 0) {
             attributeName
