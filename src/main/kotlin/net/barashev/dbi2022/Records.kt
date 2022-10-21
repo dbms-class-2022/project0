@@ -55,7 +55,9 @@ class IntAttribute: AttributeType<Int>(Int.SIZE_BYTES) {
         return javaClass.hashCode()
     }
 
-
+    override fun toString(): String {
+        return "Int"
+    }
 }
 fun intField(value: Int = 0) = IntAttribute() to value
 
@@ -78,7 +80,9 @@ class LongAttribute: AttributeType<Long>(Long.SIZE_BYTES) {
         return javaClass.hashCode()
     }
 
-
+    override fun toString(): String {
+        return "Long"
+    }
 }
 fun longField(value: Long = 0L) = LongAttribute() to value
 
@@ -109,6 +113,9 @@ class StringAttribute: AttributeType<String>() {
         return javaClass.hashCode()
     }
 
+    override fun toString(): String {
+        return "String"
+    }
 
 }
 fun stringField(value: String = "") = StringAttribute() to value
@@ -132,7 +139,9 @@ class BooleanAttribute: AttributeType<Boolean>(Byte.SIZE_BYTES) {
         return javaClass.hashCode()
     }
 
-
+    override fun toString(): String {
+        return "Boolean"
+    }
 }
 fun booleanField(value: Boolean = false) = BooleanAttribute() to value
 
@@ -155,7 +164,9 @@ class DoubleAttribute: AttributeType<Double>(Double.SIZE_BYTES) {
         return javaClass.hashCode()
     }
 
-
+    override fun toString(): String {
+        return "Double"
+    }
 }
 fun doubleField(value: Double = 0.0) = DoubleAttribute() to value
 
@@ -179,8 +190,9 @@ class DateAttribute: AttributeType<Date>(Long.SIZE_BYTES) {
     override fun hashCode(): Int {
         return javaClass.hashCode()
     }
-
-
+    override fun toString(): String {
+        return "Date"
+    }
 }
 fun dateField(value: Date = Date.from(Instant.EPOCH)) = DateAttribute() to value
 
@@ -309,7 +321,7 @@ class Record3<T1: Any, T2: Any, T3: Any>(
     }
 
     override fun toString(): String {
-        return "Record3(type1=$type1, value1=$value1, type2=$type2, value2=$value2, type3=$type3, value3=$value3)"
+        return "Record3($value1:$type1, $value2:$type2, $value3:$type3)"
     }
 
     operator fun component1() = value1

@@ -17,6 +17,7 @@
 package net.barashev.dbi2022
 
 import java.lang.IllegalArgumentException
+import java.util.Collections
 import java.util.function.Function
 
 private const val ATTRIBUTE_SYSTABLE_OID = 1
@@ -134,9 +135,19 @@ internal class TableOidMapping(
         }
         cachedMapping.remove(tableName)
     }
-
 }
 
+class IndexScanImpl<T, K: Comparable<K>>(private val pageCache: PageCache,
+                                         private val index: Index<K>,
+                                         private val recordBytesParser: Function<ByteArray, T>
+): IndexScan<T, K> {
+    override fun byEquality(key: K, keyParser: Function<ByteArray, K>): Iterable<T>  =
+        index.lookup(key)?.let {pageId ->
+            pageCache.get(pageId).allRecords().values.first {
+                it.isOk && key == keyParser.apply(it.bytes)
+            }
+        }?.bytes?.let { recordBytesParser.apply(it) }?.let { Collections.singletonList(it) } ?: Collections.emptyList()
+}
 
 class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodManager {
     private val tablePageDirectory = SimplePageDirectoryImpl(pageCache)
@@ -149,6 +160,65 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
         tableOidMapping.get(tableName)
             ?.let { tableOid -> createFullScan(tableOid, recordBytesParser) }
             ?: throw AccessMethodException("Relation $tableName not found")
+
+    override fun <T, K: Comparable<K>, S: AttributeType<K>> createIndexScan(
+        tableName: String,
+        attributeName: String,
+        attributeType: S,
+        keyParser: Function<ByteArray, K>,
+        recordBytesParser: Function<ByteArray, T>
+    ): IndexScan<T, K>? =
+        when {
+            tableExists("${tableName}_${attributeName}_idx_btree") ->
+                IndexManager.indexFactory.open(
+                    tableName,
+                    "${tableName}_${attributeName}_idx_btree",
+                    IndexMethod.BTREE,
+                    attributeType,
+                    keyParser
+                )
+            tableExists("${tableName}_${attributeName}_idx_hash") ->
+                IndexManager.indexFactory.open(
+                    tableName,
+                    "${tableName}_${attributeName}_idx_hash",
+                    IndexMethod.HASH,
+                    attributeType,
+                    keyParser
+                )
+            else -> null
+        }?.let {index ->
+            IndexScanImpl(pageCache, index, recordBytesParser)
+        }
+
+    override fun <K: Comparable<K>, S: AttributeType<K>> createIndex(
+        tableName: String, attributeName: String, attributeType: S, keyParser: Function<ByteArray, K>) {
+        doCreateIndex(
+            tableName, IndexMethod.BTREE, attributeName, attributeType, keyParser
+        ).fold(
+            onSuccess = { Result.success(it) },
+            onFailure = {
+                doCreateIndex(tableName, IndexMethod.HASH, attributeName, attributeType, keyParser)
+            }
+        ).onFailure {ex ->
+            throw AccessMethodException("No index implementation found or index build failure", ex)
+        }
+    }
+
+    private fun <K: Comparable<K>, S: AttributeType<K>> doCreateIndex(
+        tableName: String, indexMethod: IndexMethod, attributeName: String, attributeType: S, keyParser: Function<ByteArray, K>): Result<Index<K>> {
+        if (!tableExists(tableName)) {
+            throw AccessMethodException("Relation $tableName not found")
+        }
+        val indexTable = tableName.indexTableName(attributeName, indexMethod)
+        if (tableExists(indexTable)) {
+            throw AccessMethodException("Index $indexTable already exists")
+        }
+        return try {
+            Result.success(IndexManager.indexFactory.build(tableName, indexTable, indexMethod, attributeType, keyParser))
+        } catch (ex: Exception) {
+            Result.failure(ex)
+        }
+    }
 
     override fun createTable(tableName: String, vararg columns: Triple<String, AttributeType<Any>, ColumnConstraint?>): Oid {
         if (tableOidMapping.get(tableName) != null) {
@@ -179,4 +249,6 @@ class SimpleAccessMethodManager(private val pageCache: PageCache): AccessMethodM
             tableOidMapping.delete(tableName)
         }
     }
+
+    private fun String.indexTableName(attributeName: String, method: IndexMethod) = "${this}_idx_${attributeName}_${method.name.lowercase()}"
 }

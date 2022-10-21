@@ -28,7 +28,10 @@ typealias TableAttributeRecord = Record3<Oid, String, Int>
 
 interface ColumnConstraint {}
 
-class AccessMethodException(message: String): Exception(message)
+class AccessMethodException: Exception {
+    constructor(message: String): super(message)
+    constructor(message: String, cause: Throwable): super(message, cause)
+}
 
 /**
  * Full scan object can iterate over table pages and records.
@@ -37,6 +40,10 @@ class AccessMethodException(message: String): Exception(message)
  */
 interface FullScan<T> : Iterable<T> {
     fun pages(): Iterable<CachedPage>
+}
+
+interface IndexScan<T, K: Comparable<K>> {
+    fun byEquality(key: K, keyParser: Function<ByteArray, K>): Iterable<T>
 }
 
 /**
@@ -85,5 +92,19 @@ interface AccessMethodManager {
      * Deletes table with the given name.
      */
     fun deleteTable(tableName: String)
+    fun <T, K : Comparable<K>, S : AttributeType<K>> createIndexScan(
+        tableName: String,
+        attributeName: String,
+        attributeType: S,
+        keyParser: Function<ByteArray, K>,
+        recordBytesParser: Function<ByteArray, T>
+    ): IndexScan<T, K>?
+
+    fun <K : Comparable<K>, S : AttributeType<K>> createIndex(
+        tableName: String,
+        attributeName: String,
+        attributeType: S,
+        keyParser: Function<ByteArray, K>
+    )
 }
 
