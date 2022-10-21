@@ -5,6 +5,9 @@ import net.barashev.dbi2022.fake.FakeIndexFactory
 import net.barashev.dbi2022.fake.FakeMergeSort
 import net.barashev.dbi2022.fake.FakeNestedLoops
 
+/**
+ * Please change this code and use your own factories.
+ */
 fun initializeFactories(storage: Storage, cacheSize: Int): Pair<PageCache, AccessMethodManager> {
     CacheManager.factory = { storage, size -> SimplePageCacheImpl(storage, size) }
 

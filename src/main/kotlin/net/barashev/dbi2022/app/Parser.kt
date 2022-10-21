@@ -9,13 +9,13 @@ data class FilterSpec(val tableName: String, val attributeName: String, val attr
         } else "$tableName.$attributeName"
 
 }
+
 class JoinSpec(val tableName: String, val attributeName: String) {
     val attribute get() =
         if (attributeName.indexOf('.') >= 0) {
             attributeName
         } else {
-            val realTables = tableName.split(",").filter { !it.startsWith("@") }.joinToString(separator = ",")
-            "${realTables}.${attributeName}"
+            "${realTables.joinToString(separator = ",")}.${attributeName}"
         }
 
     var filter: FilterSpec? = null
@@ -30,6 +30,7 @@ class JoinSpec(val tableName: String, val attributeName: String) {
     fun filterBy(filterSpec: FilterSpec) {
         this.filter = filterSpec
     }
+    val realTables: List<String> = tableName.split(",").filter { !it.startsWith("@") }
 }
 
 typealias JoinTree = List<Pair<JoinSpec, JoinSpec>>

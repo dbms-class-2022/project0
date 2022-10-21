@@ -25,11 +25,18 @@ class QueryExecutor(
             val leftSpec = result?.let {
                 // If we already have a prefix sequence of joins, we replace a table name in the left operand of
                 // the next pair with a name of a temporary table which holds the intermediate output.
-                JoinSpec(it.tableName, joinPair.first.attribute)
+                JoinSpec(it.tableName, joinPair.first.attribute).also {mergedSpec ->
+                    joinPair.first.filter?.let {
+                        mergedSpec.filterBy(it)
+                    }
+                }
+
             } ?: joinPair.first
 
+            //println("left=$leftSpec right=${joinPair.second}")
             val leftOperand = filter(leftSpec).asJoinOperand()
             val rightOperand = filter(joinPair.second).asJoinOperand()
+            //println("left filtered=$leftOperand right filtered=$rightOperand")
             val innerJoin = createJoinOperation(JoinAlgorithm.HASH).fold(
                 onSuccess = { Result.success(it) },
                 onFailure = { createJoinOperation(JoinAlgorithm.NESTED_LOOPS) }
@@ -51,20 +58,24 @@ class QueryExecutor(
                     })
                 }
             }
-
-            var joinResult = JoinSpec(outputTableName, "")
-            plan.filters.forEach {
-                joinResult.filter = it
-                joinResult = filter(joinResult)
-            }
-            result = joinResult
-
+            result = JoinSpec(outputTableName, "")
         }
+        result = result?.let {
+            var filterResult = it
+            plan.filters.forEach {
+                //println("---- join spec : $filterResult ----")
+                filterResult.filter = it
+                filterResult = filter(filterResult)
+            }
+            filterResult
+        }
+
         return result ?: error("Join clause seems to be empty")
     }
 
     private fun filter(joinSpec: JoinSpec): JoinSpec {
         val filter = joinSpec.filter ?: return joinSpec
+       // println("filter: input=$joinSpec")
         val valueParser = buildJoinAttrFxn(JoinSpec(joinSpec.tableName, filter.attribute))
         val outputTableName = "@${filter.attributeName},${joinSpec.tableName}"
         val outputTable = accessMethodManager.createTable(outputTableName)
@@ -79,7 +90,9 @@ class QueryExecutor(
                 }
             }
         }
-        return JoinSpec(outputTableName, joinSpec.attributeName)
+        return JoinSpec(outputTableName, joinSpec.attributeName).also {
+            //println("filter: output=$it")
+        }
     }
     private fun createJoinOperation(method: JoinAlgorithm): Result<InnerJoin> =
         try {

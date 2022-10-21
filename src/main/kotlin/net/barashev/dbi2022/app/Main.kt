@@ -22,12 +22,12 @@ class DBI2022: CliktCommand() {
 
         val innerJoins = parseJoinClause(joinClause)
         val filters = parseFilterClause(filterClause)
-        val plan = Optimizer.factory(accessMethodManager, cache).buildPlan(innerJoins, filters)
+        val plan = Optimizer.factory(accessMethodManager, cache).buildPlan(QueryPlan(innerJoins, filters))
 
         val joinResult = QueryExecutor(accessMethodManager, cache, tableRecordParsers, attributeValueParsers).run {
             execute(plan)
         }
-        val joinedTables = joinResult.tableName.split(",").filter { !it.startsWith("@")}
+        val joinedTables = joinResult.realTables
         accessMethodManager.createFullScan(joinResult.tableName) { bytes ->
             parseJoinedRecord(bytes, joinedTables, tableRecordParsers)
         }.forEach {
