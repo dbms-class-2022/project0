@@ -55,7 +55,7 @@ private fun DataGenerator.populateFlights(flightCount: Int, planetCount: Int, sp
     val flightTable = accessMethodManager.createTable("flight")
     TableBuilder(accessMethodManager, cache, flightTable).use { builder ->
         (1..flightCount).forEach {idx ->
-            FlightRecord(intField(idx), intField(Random.nextInt(planetCount)), intField(Random.nextInt(spacecraftCount))).also {
+            FlightRecord(intField(idx), intField(Random.nextInt(1, planetCount)), intField(Random.nextInt(1, spacecraftCount))).also {
                 builder.insert(it.asBytes())
             }
         }

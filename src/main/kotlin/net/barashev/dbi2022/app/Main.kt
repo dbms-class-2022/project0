@@ -32,6 +32,7 @@ class DBI2022: CliktCommand() {
         val filters = parseFilterClause(filterClause)
         val plan = Optimizer.factory(accessMethodManager, cache).buildPlan(QueryPlan(innerJoins, filters))
 
+        var rowCount = 0
         val joinResult = QueryExecutor(accessMethodManager, cache, tableRecordParsers, attributeValueParsers).run {
             execute(plan)
         }
@@ -39,6 +40,7 @@ class DBI2022: CliktCommand() {
         accessMethodManager.createFullScan(joinResult.tableName) { bytes ->
             parseJoinedRecord(bytes, joinedTables, tableRecordParsers)
         }.forEach {
+            rowCount++
             it.entries.forEach { (tableName, recordBytes) ->
                 println("$tableName: ${tableRecordParsers[tableName]!!.invoke(recordBytes)}")
             }
