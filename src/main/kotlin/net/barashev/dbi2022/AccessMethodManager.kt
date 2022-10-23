@@ -22,7 +22,7 @@ import kotlin.jvm.Throws
 internal const val MAX_ROOT_PAGE_COUNT = 4096
 typealias Oid = Int
 typealias OidPageidRecord = Record2<Oid, PageId>
-typealias OidNameRecord = Record2<Oid, String>
+typealias OidNameRecord = Record3<Oid, String, Boolean>
 typealias TableAttributeRecord = Record3<Oid, String, Int>
 
 

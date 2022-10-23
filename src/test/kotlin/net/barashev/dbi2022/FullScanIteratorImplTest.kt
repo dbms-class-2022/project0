@@ -56,13 +56,13 @@ class FullScanIteratorImplTest {
         createRootRecords(cache)
         val rootRecords = RootRecords(cache, 0, 1)
         cache.getAndPin(1000).let {
-            it.putRecord(OidNameRecord(intField(2), stringField("table2")).asBytes())
-            it.putRecord(OidNameRecord(intField(3), stringField("table3")).asBytes())
+            it.putRecord(OidNameRecord(intField(2), stringField("table2"), booleanField(false)).asBytes())
+            it.putRecord(OidNameRecord(intField(3), stringField("table3"), booleanField(false)).asBytes())
         }
         assertEquals(
             listOf("table2", "table3"),
             FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
-                OidNameRecord(intField(), stringField()).fromBytes(it)
+                OidNameRecord(intField(), stringField(), booleanField(false)).fromBytes(it)
             }.map { it.value2 }.toList()
         )
     }
@@ -77,17 +77,17 @@ class FullScanIteratorImplTest {
         }
         val rootRecords = RootRecords(cache, 0, 1)
         cache.getAndPin(1000).let {
-            it.putRecord(OidNameRecord(intField(2), stringField("table2")).asBytes())
-            it.putRecord(OidNameRecord(intField(3), stringField("table3")).asBytes())
+            it.putRecord(OidNameRecord(intField(2), stringField("table2"), booleanField(false)).asBytes())
+            it.putRecord(OidNameRecord(intField(3), stringField("table3"), booleanField(false)).asBytes())
         }
         cache.getAndPin(1001).let {
-            it.putRecord(OidNameRecord(intField(4), stringField("table4")).asBytes())
-            it.putRecord(OidNameRecord(intField(5), stringField("table5")).asBytes())
+            it.putRecord(OidNameRecord(intField(4), stringField("table4"), booleanField(false)).asBytes())
+            it.putRecord(OidNameRecord(intField(5), stringField("table5"), booleanField(false)).asBytes())
         }
         assertEquals(
             listOf("table2", "table3", "table4", "table5"),
             FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
-                OidNameRecord(intField(), stringField()).fromBytes(it)
+                OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it)
             }.map { it.value2 }.toList()
         )
     }
@@ -106,7 +106,7 @@ class FullScanIteratorImplTest {
         (1000..1003).forEach { pageId ->
             cache.getAndPin(pageId).use {
                 val tableOid = pageId % 1000 + 1
-                it.putRecord(OidNameRecord(intField(tableOid), stringField("table$tableOid")).asBytes())
+                it.putRecord(OidNameRecord(intField(tableOid), stringField("table$tableOid"), booleanField(false)).asBytes())
             }
         }
 
@@ -116,7 +116,7 @@ class FullScanIteratorImplTest {
         assertEquals(
             listOf("table1", "table2", "table3", "table4"),
             FullScanAccessImpl(cache, NAME_SYSTABLE_OID, rootRecords::iterator) {
-                OidNameRecord(intField(), stringField()).fromBytes(it)
+                OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it)
             }.map { it.value2 }.toList()
         )
     }

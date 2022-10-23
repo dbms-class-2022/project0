@@ -74,13 +74,13 @@ internal class TableOidMapping(
 
     private fun createAccess(): FullScanAccessImpl<OidNameRecord> =
         FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, {tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()}) {
-            OidNameRecord(intField(), stringField()).fromBytes(it)
+            OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it)
         }
 
     fun get(tableName: String): Oid? {
         val oid = cachedMapping.getOrPut(tableName) {
             createAccess().firstOrNull {
-                it.value2 == tableName
+                it.value2 == tableName && !it.value3
             }?.value1 ?: -1
         }
         return if (oid == -1) null else oid
@@ -88,12 +88,12 @@ internal class TableOidMapping(
 
     internal fun isValid(oid: Oid): Boolean =
         createAccess().firstOrNull {
-            it.value1 == oid
+            it.value1 == oid && !it.value3
         } != null
 
     fun create(tableName: String): Oid {
         val nextOid = nextTableOid()
-        val record = OidNameRecord(intField(nextOid), stringField(tableName))
+        val record = OidNameRecord(intField(nextOid), stringField(tableName), booleanField(false))
         val bytes = record.asBytes()
 
         val isOk = tablePageDirectory.pages(NAME_SYSTABLE_OID).firstOrNull { oidPageId ->
@@ -116,6 +116,7 @@ internal class TableOidMapping(
     private fun nextTableOid(): Oid {
         var maxOid = NAME_SYSTABLE_OID
         createAccess().forEach {
+            // We ignore "isDeleted" flag here to be sure that table oid are always unique
             maxOid = maxOf(maxOid, it.value1)
         }
         return maxOid + 1
@@ -123,14 +124,16 @@ internal class TableOidMapping(
 
     fun delete(tableName: String) {
         FullScanAccessImpl(pageCache, NAME_SYSTABLE_OID, {tablePageDirectory.pages(NAME_SYSTABLE_OID).iterator()}) {
-            OidNameRecord(intField(), stringField()).fromBytes(it)
+            OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it)
         }.pages().forEach {page ->
-            page.allRecords().entries.find {
+            page.allRecords().entries.mapNotNull {
                 if (it.value.isOk) {
-                    OidNameRecord(intField(), stringField()).fromBytes(it.value.bytes).component2() == tableName
-                } else false
+                    it.key to OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it.value.bytes)
+                } else null
+            }.find {
+                it.second.component2() == tableName
             }?.let {
-                page.deleteRecord(it.key)
+                page.putRecord(OidNameRecord(intField(it.second.value1), stringField(it.second.value2), booleanField(true)).asBytes(), it.first)
             }
         }
         cachedMapping.remove(tableName)

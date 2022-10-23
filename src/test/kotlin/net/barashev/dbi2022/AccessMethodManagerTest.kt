@@ -150,5 +150,8 @@ class AccessMethodManagerTest {
         assertFalse(catalog.tableExists("table1"))
         assertThrows<AccessMethodException> {  catalog.pageCount("table1") }
         assertThrows<AccessMethodException> {  catalog.addPage(tableOid) }
+
+        val tableOid2 = catalog.createTable("table2")
+        assertNotEquals(tableOid, tableOid2)
     }
 }
