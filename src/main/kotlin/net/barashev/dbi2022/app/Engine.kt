@@ -59,7 +59,7 @@ class QueryExecutor(
             val joinOutput = innerJoin.getOrThrow().join(leftOperand, rightOperand)
 
             val outputTableName = "${leftOperand.tableName},${rightOperand.tableName}".also {
-                if (joinStack.isNotEmpty()) {
+                if (joinStack.isNotEmpty() || plan.filters.isNotEmpty()) {
                     // We will not add the last intermediate output to the list because we need it to fetch
                     // the whole result.
                     temporaryTables.add(it)
@@ -78,10 +78,10 @@ class QueryExecutor(
         }
         result = result?.let {
             var filterResult = it
-            plan.filters.forEach {
+            plan.filters.forEachIndexed { idx, it ->
                 //println("---- join spec : $filterResult ----")
                 filterResult.filter = it
-                filterResult = filter(filterResult, temporaryTables)
+                filterResult = filter(filterResult, if (idx == plan.filters.size - 1) mutableListOf() else temporaryTables)
             }
             filterResult
         }
