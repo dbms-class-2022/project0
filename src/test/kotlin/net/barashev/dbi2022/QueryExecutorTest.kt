@@ -3,6 +3,7 @@ package net.barashev.dbi2022
 import net.barashev.dbi2022.app.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class QueryExecutorTest {
@@ -138,6 +139,19 @@ class QueryExecutorTest {
             }
         }
         assertTrue(resultRowCount > 0)
+    }
+
+    @Test
+    fun `temporary tables are deleted`() {
+        val storage = createHardDriveEmulatorStorage()
+        val (cache, accessMethodManager) = initializeFactories(storage, 20)
+        generateData(accessMethodManager, cache)
+
+        val plan = QueryPlan(parseJoinClause("planet.id:flight.planet_id flight.spacecraft_id:spacecraft.id"), emptyList())
+
+        QueryExecutor(accessMethodManager, cache, tableRecordParsers, attributeValueParsers).execute(plan)
+        assertFalse(accessMethodManager.tableExists("planet,flight"))
+        assertTrue(accessMethodManager.tableExists("planet,flight,spacecraft"))
     }
 
 }

@@ -18,6 +18,16 @@ class QueryExecutor(
     private val attributeValueParsers: Map<String, AttributeValueParser>
 ) {
     fun execute(plan: QueryPlan): JoinSpec {
+        val temporaryTables = mutableListOf<String>()
+        return try {
+            doExecute(plan, temporaryTables)
+        } finally {
+            temporaryTables.forEach {
+                accessMethodManager.deleteTable(it)
+            }
+        }
+    }
+    private fun doExecute(plan: QueryPlan, temporaryTables: MutableList<String>): JoinSpec {
         val joinStack = ArrayDeque(plan.joinTree)
         var result: JoinSpec? = null
         while (joinStack.isNotEmpty()) {
@@ -34,8 +44,8 @@ class QueryExecutor(
             } ?: joinPair.first
 
             //println("left=$leftSpec right=${joinPair.second}")
-            val leftOperand = filter(leftSpec).asJoinOperand()
-            val rightOperand = filter(joinPair.second).asJoinOperand()
+            val leftOperand = filter(leftSpec, temporaryTables).asJoinOperand()
+            val rightOperand = filter(joinPair.second, temporaryTables).asJoinOperand()
             //println("left filtered=$leftOperand right filtered=$rightOperand")
             val innerJoin = createJoinOperation(JoinAlgorithm.HASH).fold(
                 onSuccess = { Result.success(it) },
@@ -48,7 +58,13 @@ class QueryExecutor(
             }
             val joinOutput = innerJoin.getOrThrow().join(leftOperand, rightOperand)
 
-            val outputTableName = "${leftOperand.tableName},${rightOperand.tableName}"
+            val outputTableName = "${leftOperand.tableName},${rightOperand.tableName}".also {
+                if (joinStack.isNotEmpty()) {
+                    // We will not add the last intermediate output to the list because we need it to fetch
+                    // the whole result.
+                    temporaryTables.add(it)
+                }
+            }
             val outputTableOid = accessMethodManager.createTable(outputTableName)
             TableBuilder(accessMethodManager, pageCache, outputTableOid).use { outputTableBuilder ->
                 joinOutput.forEach { pair ->
@@ -65,7 +81,7 @@ class QueryExecutor(
             plan.filters.forEach {
                 //println("---- join spec : $filterResult ----")
                 filterResult.filter = it
-                filterResult = filter(filterResult)
+                filterResult = filter(filterResult, temporaryTables)
             }
             filterResult
         }
@@ -73,11 +89,13 @@ class QueryExecutor(
         return result ?: error("Join clause seems to be empty")
     }
 
-    private fun filter(joinSpec: JoinSpec): JoinSpec {
+    private fun filter(joinSpec: JoinSpec, temporaryTables: MutableList<String>): JoinSpec {
         val filter = joinSpec.filter ?: return joinSpec
        // println("filter: input=$joinSpec")
         val valueParser = buildJoinAttrFxn(JoinSpec(joinSpec.tableName, filter.attribute))
-        val outputTableName = "@${filter.attributeName},${joinSpec.tableName}"
+        val outputTableName = "@${filter.attributeName},${joinSpec.tableName}".also {
+            temporaryTables.add(it)
+        }
         val outputTable = accessMethodManager.createTable(outputTableName)
         TableBuilder(accessMethodManager, pageCache, outputTable).use { builder ->
             val filteredRecords: Iterable<ByteArray> = if (filter.useIndex) {
