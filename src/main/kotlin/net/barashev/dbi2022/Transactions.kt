@@ -49,6 +49,8 @@ class WriteWait(val blockingTxn: TransactionDescriptor): WriteResult()
  *
  * For read/write calls the possible outputs are enumerated in sealed classes ReadResult/WriteResult.
  * For commit/abort calls the output is a list of transactions which have been waiting and shall be resumed.
+ *
+ * Implementation may assume that access to all methods, including version write callbacks, is single-threaded.
  */
 interface Scheduler {
     /**
