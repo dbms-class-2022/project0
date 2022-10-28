@@ -1,5 +1,9 @@
 package net.barashev.dbi2022
 
+/**
+ * Transaction descriptor is just an integer number. One can assume that it is a monotonically increasing sequence
+ * and it can be used as a logical timestamp if needed.
+ */
 typealias TransactionDescriptor = Int
 
 sealed class ReadResult
