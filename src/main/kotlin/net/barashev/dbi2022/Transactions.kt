@@ -12,17 +12,17 @@ sealed class ReadResult
  * The requested read is OK. However, in some cases, e.g. when reading pages in MVCC protocol,
  * another page may be suggested as a replacement (e.g. some previous version of the same page)
  */
-class ReadOk(val page: PageId): ReadResult()
+data class ReadOk(val page: PageId): ReadResult()
 
 /**
  * The requested read is not OK and transaction must be aborted.
  */
-class ReadAbort(val reason: String): ReadResult()
+data class ReadAbort(val reason: String): ReadResult()
 
 /**
  * The requested read shall wait until the transaction `blockingTxn` commits or aborts.
  */
-class ReadWait(val blockingTxn: TransactionDescriptor): ReadResult()
+data class ReadWait(val blockingTxn: TransactionDescriptor): ReadResult()
 
 
 sealed class WriteResult
@@ -30,17 +30,17 @@ sealed class WriteResult
 /**
  * The requested write is ok. If write produces a new version of a page, it shall report it back using `versionWriteCallback`
  */
-class WriteOk(val versionWriteCallback: (TransactionDescriptor, PageId) -> Unit): WriteResult()
+data class WriteOk(val versionWriteCallback: (TransactionDescriptor, PageId) -> Unit): WriteResult()
 
 /**
  * The requested write is not OK and the transaction must be aborted.
  */
-class WriteAbort(val reason: String): WriteResult()
+data class WriteAbort(val reason: String): WriteResult()
 
 /**
  * The requested write shall wait until the transaction `blockingTxn` commits or aborts.
  */
-class WriteWait(val blockingTxn: TransactionDescriptor): WriteResult()
+data  class WriteWait(val blockingTxn: TransactionDescriptor): WriteResult()
 
 /**
  * This is a transaction action scheduler which is responsible for building a serializable schedule.
