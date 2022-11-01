@@ -10,7 +10,20 @@ data class FilterSpec(
             attributeName
         } else "$tableName.$attributeName"
 
+    override fun toString(): String {
+        return "$attribute ${op.asText()} $attributeValue"
+    }
 }
+
+private fun BiPredicate<Comparable<Any>, Comparable<Any>>.asText(): String =
+    when (this) {
+        EQ -> "="
+        LT -> "<"
+        GT -> ">"
+        LE -> "<="
+        GE -> ">="
+        else -> "?"
+    }
 
 class JoinSpec(val tableName: String, val attributeName: String) {
     val attribute get() =
@@ -26,7 +39,11 @@ class JoinSpec(val tableName: String, val attributeName: String) {
     operator fun component1() = tableName
     operator fun component2() = attribute
     override fun toString(): String {
-        return "JoinSpec(tableName='$tableName', attributeShortName='$attributeName')"
+        return "JoinSpec(tableName='$tableName', attributeShortName='$attributeName')".let {join ->
+            filter?.let {
+                "$join[$it]"
+            } ?: join
+        }
     }
 
     fun filterBy(filterSpec: FilterSpec) {
