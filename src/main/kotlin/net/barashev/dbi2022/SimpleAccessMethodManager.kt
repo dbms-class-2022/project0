@@ -130,9 +130,9 @@ internal class TableOidMapping(
                 if (it.value.isOk) {
                     it.key to OidNameRecord(intField(), stringField(), booleanField()).fromBytes(it.value.bytes)
                 } else null
-            }.find {
+            }.filter {
                 it.second.component2() == tableName
-            }?.let {
+            }.forEach {
                 page.putRecord(OidNameRecord(intField(it.second.value1), stringField(it.second.value2), booleanField(true)).asBytes(), it.first)
             }
         }
