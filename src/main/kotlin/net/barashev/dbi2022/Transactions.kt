@@ -102,3 +102,5 @@ class FakeScheduler: Scheduler {
     }
 
 }
+
+class TransactionException(msg: String): RuntimeException(msg)

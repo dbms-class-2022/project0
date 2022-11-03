@@ -30,6 +30,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4")
     implementation("net.datafaker:datafaker:1.5.0")
     implementation("com.github.ajalt.clikt:clikt:3.5.0")
     testImplementation(kotlin("test"))
