@@ -9,7 +9,7 @@ import net.barashev.dbi2022.*
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
-class TransactionManager(val scheduler: Scheduler, val cache: PageCache): Scheduler by scheduler {
+class TransactionManager(private val scheduler: Scheduler, val cache: PageCache): Scheduler by scheduler {
     private val txnWorkerScope = CoroutineScope(Executors.newCachedThreadPool().asCoroutineDispatcher())
     private val lastTxnId = AtomicInteger(0)
     private val txnCompletionScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
@@ -36,10 +36,10 @@ class TransactionManager(val scheduler: Scheduler, val cache: PageCache): Schedu
 }
 
 internal class TxnPageCacheImpl(
-    val proxiedCache: PageCache,
-    val txn: TransactionDescriptor,
-    val scheduler: Scheduler,
-    val txnCompletionChannel: Channel<TransactionDescriptor>
+    private val proxiedCache: PageCache,
+    private val txn: TransactionDescriptor,
+    private val scheduler: Scheduler,
+    private val txnCompletionChannel: Channel<TransactionDescriptor>
 ) : PageCache by proxiedCache {
     override fun get(pageId: PageId): CachedPage = tryRead(pageId) { proxiedCache.get(pageId) }
 
@@ -101,7 +101,7 @@ internal class TxnPageCacheImpl(
         TxnPageCacheImpl(proxiedCache.createSubCache(size), txn, scheduler, txnCompletionChannel)
 }
 
-internal class TxnPage(val proxiedPage: CachedPage, val txnCache: TxnPageCacheImpl): CachedPage by proxiedPage {
+internal class TxnPage(private val proxiedPage: CachedPage, private val txnCache: TxnPageCacheImpl): CachedPage by proxiedPage {
     override fun putRecord(recordData: ByteArray, recordId: RecordId): PutRecordResult =
         txnCache.tryWrite(proxiedPage.id) {
             proxiedPage.putRecord(recordData, recordId)
