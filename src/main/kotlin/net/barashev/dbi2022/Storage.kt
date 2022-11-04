@@ -74,6 +74,8 @@ interface DiskPage {
     fun allRecords(): Map<RecordId, GetRecordResult>
 
     fun clear()
+
+    fun reset()
 }
 
 /**

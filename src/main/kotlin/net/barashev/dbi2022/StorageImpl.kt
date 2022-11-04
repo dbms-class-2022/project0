@@ -33,6 +33,11 @@ private class DiskPageImpl(
     private val pageSize: Int,
     private val bytes: ByteArray = ByteArray(pageSize)) : DiskPage {
 
+    private var sourcePage: DiskPageImpl? = null
+    constructor(sourcePage: DiskPageImpl): this(sourcePage.id, DEFAULT_DISK_PAGE_SIZE, sourcePage.bytes) {
+        this.sourcePage = sourcePage
+    }
+
     private val directoryStartOffset = Int.SIZE_BYTES
     private var directorySize = 0
         set(value) {
@@ -165,11 +170,15 @@ private class DiskPageImpl(
     private fun ByteArray.setDirectorySize(size: Int) = ByteBuffer.wrap(this, 0, pageSize).putInt(0, size)
 
     private fun ByteBuffer.toBytes() = ByteArray(this.limit()).also {this.get(it)}
+
+    override fun reset() {
+        this.sourcePage?.bytes?.copyInto(this.bytes)
+    }
 }
 
 private class HardDiskEmulatorStorage: Storage {
     private var accessCostMs = 0.0
-    private val pageMap = TreeMap<PageId, DiskPage>()
+    private val pageMap = TreeMap<PageId, DiskPageImpl>()
 
     override val totalAccessCost: Double get() = accessCostMs
 
@@ -180,9 +189,7 @@ private class HardDiskEmulatorStorage: Storage {
         }
 
     fun doReadPage(pageId: PageId): DiskPage =
-        DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE, pageMap.getOrPut(pageId) {
-            DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE)
-        }.rawBytes)
+        DiskPageImpl(pageMap.getOrPut(pageId) { DiskPageImpl(pageId, DEFAULT_DISK_PAGE_SIZE) })
 
     override fun bulkRead(startPageId: PageId, numPages: Int, reader: Consumer<DiskPage>) {
         val realStartPageId = if (startPageId == -1) nextPageId() else startPageId
