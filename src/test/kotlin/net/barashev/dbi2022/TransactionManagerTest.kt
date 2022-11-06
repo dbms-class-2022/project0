@@ -5,7 +5,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import net.barashev.dbi2022.txn.LogManager
 import net.barashev.dbi2022.txn.TransactionManager
+import net.barashev.dbi2022.txn.walFactory
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,7 +22,7 @@ class TransactionManagerTest {
         val storage = createHardDriveEmulatorStorage()
         val realCache = SimplePageCacheImpl(storage, 20)
         val scheduler = FakeScheduler()
-        val txnManager = TransactionManager(scheduler, realCache)
+        val txnManager = TransactionManager(scheduler, LogManager(storage, 20, walFactory(createHardDriveEmulatorStorage())))
 
         val countDown = CountDownLatch(2)
         txnManager.txn {cache, txnId ->
@@ -46,7 +48,7 @@ class TransactionManagerTest {
         val storage = createHardDriveEmulatorStorage()
         val realCache = SimplePageCacheImpl(storage, 20)
         val scheduler = BlockAllOnWriteScheduler()
-        val txnManager = TransactionManager(scheduler, realCache)
+        val txnManager = TransactionManager(scheduler, LogManager(storage, 20, walFactory(createHardDriveEmulatorStorage())))
         val sync = TxnActionSync()
 
         val countDown = CountDownLatch(2)
