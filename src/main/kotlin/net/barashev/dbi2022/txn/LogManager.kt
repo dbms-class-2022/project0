@@ -1,6 +1,8 @@
 package net.barashev.dbi2022.txn
 
 import net.barashev.dbi2022.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 
 /**
  * Write-ahead log interface. It is responsible for maintaining undo- or redo- log with information sufficient
@@ -70,8 +72,8 @@ var recoveryFactory: () -> Recovery = { NoRecovery() }
 class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL, useRevertableStorage: Boolean = true) {
     val pageCache: PageCache
 
-    private val txnWrites = mutableMapOf<TransactionDescriptor, MutableSet<PageId>>()
-    private val allWrites = mutableSetOf<PageId>()
+    private val txnWrites = ConcurrentHashMap<TransactionDescriptor, MutableSet<PageId>>()
+    private val allWrites = ConcurrentHashMap<PageId, Boolean>()//mutableMapOf<PageId, Boolean>()
 
     init {
         val loggingStorage = if (useRevertableStorage) RevertableStorage(realStorage, this::isTxnModified) else realStorage
@@ -85,7 +87,7 @@ class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL, use
                 wal.beforePageWrite(txn, pageCache.get(pageId))
             }
             txnWrites.getOrPut(txn) { mutableSetOf() }.add(pageId)
-            allWrites.add(pageId)
+            allWrites[pageId] = true
             if (writeDone) {
                 wal.afterPageWrite(txn, pageCache.get(pageId))
             }
@@ -94,7 +96,7 @@ class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL, use
 
     fun abort(txn: TransactionDescriptor) {
         txnWrites.remove(txn)?.also {modifiedPages ->
-            allWrites.removeAll(modifiedPages)
+            allWrites.keys.removeAll(modifiedPages)
             modifiedPages.forEach { pageId ->
                 pageCache.get(pageId).let {
                     it.reset()
@@ -106,13 +108,13 @@ class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL, use
 
     fun commit(txn: TransactionDescriptor) {
         txnWrites.remove(txn)?.let {modifiedPages ->
-            allWrites.removeAll(modifiedPages)
+            allWrites.keys.removeAll(modifiedPages)
             wal.transactionCommitted(txn, pageCache, modifiedPages)
         }
 
     }
 
-    private fun isTxnModified(pageId: PageId) = allWrites.contains(pageId)
+    private fun isTxnModified(pageId: PageId) = allWrites.containsKey(pageId)
 }
 
 // This storage implementation will ignore disk page write calls related to pages modified by any running transaction.
@@ -126,7 +128,7 @@ internal class RevertableStorage(private val realStorage: Storage, private val i
 }
 
 internal class FakeWAL: WAL {
-    private val log = mutableListOf<String>()
+    private val log = ConcurrentLinkedDeque<String>()
     override fun transactionStarted(txn: TransactionDescriptor) {
         log.add("<START T$txn>")
     }
