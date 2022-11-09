@@ -20,7 +20,6 @@ class TransactionManagerTest {
     @Test
     fun `single transaction with fake scheduler`() {
         val storage = createHardDriveEmulatorStorage()
-        val realCache = SimplePageCacheImpl(storage, 20)
         val scheduler = FakeScheduler()
         val txnManager = TransactionManager(scheduler, LogManager(storage, 20, walFactory(createHardDriveEmulatorStorage())))
 

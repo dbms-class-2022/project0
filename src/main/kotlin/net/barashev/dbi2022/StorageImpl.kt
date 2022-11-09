@@ -34,7 +34,7 @@ private class DiskPageImpl(
     private val bytes: ByteArray = ByteArray(pageSize)) : DiskPage {
 
     private var sourcePage: DiskPageImpl? = null
-    constructor(sourcePage: DiskPageImpl): this(sourcePage.id, DEFAULT_DISK_PAGE_SIZE, sourcePage.bytes) {
+    constructor(sourcePage: DiskPageImpl): this(sourcePage.id, DEFAULT_DISK_PAGE_SIZE, sourcePage.bytes.copyOf()) {
         this.sourcePage = sourcePage
     }
 

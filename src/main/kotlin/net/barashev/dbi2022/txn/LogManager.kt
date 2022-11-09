@@ -67,14 +67,14 @@ var recoveryFactory: () -> Recovery = { NoRecovery() }
  * Log Manager responsibility is to keep track of all started and completed transactions and pages which they modify.
  * It uses a WAL instance to actually build the log.
  */
-class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL) {
+class LogManager(realStorage: Storage, cacheSize: Int, private val wal: WAL, useRevertableStorage: Boolean = true) {
     val pageCache: PageCache
 
     private val txnWrites = mutableMapOf<TransactionDescriptor, MutableSet<PageId>>()
     private val allWrites = mutableSetOf<PageId>()
 
     init {
-        val loggingStorage = RevertableStorage(realStorage, this::isTxnModified)
+        val loggingStorage = if (useRevertableStorage) RevertableStorage(realStorage, this::isTxnModified) else realStorage
         pageCache = CacheManager.factory(loggingStorage, cacheSize)
     }
 
