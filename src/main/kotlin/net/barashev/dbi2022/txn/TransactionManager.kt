@@ -84,7 +84,9 @@ internal class TxnPageCacheImpl(
             when (val write = scheduler.write(txn, pageId)) {
                 is WriteOk -> {
                     writeTracker(pageId, false)
-                    return code().also { writeTracker(pageId, true) }
+                    return code().also {
+                        writeTracker(pageId, true)
+                    }
                 }
 
                 is WriteAbort -> {

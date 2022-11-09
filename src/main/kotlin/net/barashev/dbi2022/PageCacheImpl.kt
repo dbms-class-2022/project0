@@ -101,7 +101,9 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
         if (cache.size == maxCacheSize) {
             swap(getEvictCandidate(), result)
         } else {
-            this.cacheArray.add(result)
+            synchronized(cacheArray) {
+                this.cacheArray.add(result)
+            }
         }
         return result
     }
@@ -114,8 +116,10 @@ open class SimplePageCacheImpl(internal val storage: Storage, private val maxCac
 
     internal fun swap(victim: CachedPageImpl, newPage: CachedPageImpl) {
         victim.write()
-        val idx = cacheArray.indexOf(victim)
-        cacheArray[idx] = newPage
+        synchronized(cacheArray) {
+            val idx = cacheArray.indexOf(victim)
+            cacheArray[idx] = newPage
+        }
     }
 
     private fun recordCacheHit(isCacheHit: Boolean) =
@@ -169,7 +173,9 @@ class SubcacheImpl(private val mainCache: SimplePageCacheImpl, private val maxCa
                 subcachePages.remove(it.diskPage.id)
             }
         } else {
-            mainCache.cacheArray.add(result)
+            synchronized(mainCache.cacheArray) {
+                mainCache.cacheArray.add(result)
+            }
         }
         subcachePages.add(page.id)
         return result
